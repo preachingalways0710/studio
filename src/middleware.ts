@@ -6,26 +6,17 @@ export async function middleware(request: NextRequest) {
   
   const isAuthPage = pathname === '/login' || pathname === '/signup';
 
-  // If user has a session cookie and is on an auth page,
-  // redirect them to the dashboard.
   if (sessionCookie && isAuthPage) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // If user does not have a session cookie and is trying to access a protected page,
-  // redirect them to the login page.
   if (!sessionCookie && !isAuthPage) {
-     const response = NextResponse.redirect(new URL('/login', request.url));
-     // Clear any invalid cookie that might be present
-     response.cookies.delete('session');
-     return response;
+     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If none of the above conditions are met, allow the request to proceed.
   return NextResponse.next();
 }
 
-// Configuration to specify which routes should be processed by this middleware.
 export const config = {
   matcher: [
     /*

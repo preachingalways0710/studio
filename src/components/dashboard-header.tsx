@@ -17,7 +17,7 @@ import { MonthlyOverview } from './monthly-overview';
 import type { Student, HelperAttendance } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { AddStudentDialog } from './add-student-dialog';
-import { logoutAction } from '@/app/actions';
+import { useRouter } from 'next/navigation';
 
 
 interface DashboardHeaderProps {
@@ -44,8 +44,15 @@ export function DashboardHeader({
   onUpdateHelpers,
 }: DashboardHeaderProps) {
   
+  const router = useRouter();
+
   const handleLogout = async () => {
-    await logoutAction();
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
+    } catch(error) {
+        console.error("Logout failed", error);
+    }
   };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
