@@ -192,7 +192,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
           <CardTitle className="font-headline text-2xl">
              <EditableField value={student.name} onSave={(v) => handleFieldSave('name', v)} textClassName="justify-center"/>
           </CardTitle>
-          <p className="text-sm text-muted-foreground">{age} years old</p>
+          <p className="text-sm text-muted-foreground">{age} anos</p>
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-center px-4 pb-4">
@@ -210,22 +210,23 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
             ) : (
                 <Button onClick={onMarkPresent} className="w-full">
                     <CalendarCheck className="mr-2 h-4 w-4" />
-                    Present
+                    Presente
                 </Button>
             )}
             <ActionItem
                 icon={Users}
-                label="Friends"
-                pointsLabel="+30 ea."
+                label="Convidados"
+                pointsLabel="+"
                 onAction={handleFriendPoints}
+                placeholder="+30"
             />
         </div>
       </CardContent>
        <CardFooter className="flex flex-col gap-2 p-2 pt-0 border-t bg-muted/50">
          <ActionItem
             icon={ShoppingCart}
-            label="Purchase"
-            pointsLabel="Spend"
+            label="Loja"
+            pointsLabel="Gastar"
             onAction={handlePurchase}
             variant="secondary"
          />
@@ -235,21 +236,15 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
 }
 
 
-function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'default', isSeparator = false }: {
+function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'default', placeholder }: {
     icon: React.ElementType,
     label: string,
     pointsLabel: string,
     onAction: (value: number) => void,
     variant?: 'default' | 'secondary',
-    isSeparator?: boolean
+    placeholder?: string
 }) {
     const [value, setValue] = useState('');
-    
-    if (isSeparator) {
-        return <div className="flex flex-col items-center justify-center h-full">
-            <Separator orientation="vertical" className="h-10" />
-        </div>;
-    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -270,7 +265,7 @@ function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'defau
                 <Input
                     type="number"
                     min="1"
-                    placeholder="0"
+                    placeholder={placeholder || "0"}
                     value={value}
                     onChange={e => setValue(e.target.value)}
                     className="h-7 w-full text-center p-1"

@@ -21,7 +21,7 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
             <h1 className="text-lg font-bold font-headline">KidPoint Tracker</h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{presentCount}/{students.length} Present</span>
+                <span>{presentCount}/{students.length} Presente</span>
             </div>
         </div>
       </div>
@@ -29,7 +29,7 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
         <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Search students..."
+          placeholder="Buscar pessoas..."
           value={searchTerm}
           onChange={e => onSearchChange(e.target.value)}
           className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[280px]"
