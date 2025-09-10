@@ -1,9 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onIdTokenChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useRouter, usePathname } from 'next/navigation';
+import type { User } from 'firebase/auth';
+
+// Mock user object for a non-authenticated setup
+const ANONYMOUS_USER = {
+  uid: 'shared-user-id',
+  email: 'shared@example.com',
+  displayName: 'Shared User',
+  // Add any other user properties your app might use
+} as User;
 
 interface AuthContextType {
   user: User | null;
@@ -13,20 +19,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(ANONYMOUS_USER);
+  const [loading, setLoading] = useState(false); // Set to false as we are not fetching auth state
 
+  // No-op useEffect, since we are not listening for auth changes.
   useEffect(() => {
-    // Listen for ID token changes to set user state
-    const unsubscribe = onIdTokenChanged(auth, (newUser) => {
-      setUser(newUser);
-      setLoading(false);
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    // You could potentially load some app-wide settings here if needed
   }, []);
 
 

@@ -4,8 +4,6 @@ import { Dashboard } from '@/components/dashboard';
 import { useState, useEffect } from 'react';
 import type { Student, HelperAttendance } from '@/lib/types';
 import React from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -14,72 +12,39 @@ interface DashboardPageProps {
   initialHelperAttendance: HelperAttendance | null;
 }
 
+const ANONYMOUS_USER_ID = 'shared-user-id';
+
 export function DashboardPage({ initialStudents, initialHelperAttendance }: DashboardPageProps) {
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(initialHelperAttendance);
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    const fetchData = async () => {
-      setDataLoading(true);
-      try {
-        // Fetch Students
-        const studentQuery = query(collection(db, 'students'), where('userId', '==', user.uid));
-        const studentSnapshot = await getDocs(studentQuery);
-        const fetchedStudents = studentSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Student[];
-        setStudents(fetchedStudents);
-
-        // Fetch Helper Attendance
-        const currentMonth = new Date().toLocaleString('default', { month: 'long' });
-        const currentYear = new Date().getFullYear();
-        const helperDocId = `${user.uid}_${currentMonth}_${currentYear}`;
-        const helperDocRef = doc(db, 'helpers', helperDocId);
-        const helperDocSnap = await getDoc(helperDocRef);
-
-        if (helperDocSnap.exists()) {
-          setHelperAttendance(helperDocSnap.data() as HelperAttendance);
-        } else {
-          setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
-        }
-      } catch (error) {
-        console.error('Error fetching data on client:', error);
-        setStudents([]);
-        setHelperAttendance(null);
-      } finally {
-        setDataLoading(false);
-      }
-    };
-
-    fetchData();
+    const userId = ANONYMOUS_USER_ID;
 
     // Set up listeners for real-time updates
-    const studentQuery = query(collection(db, 'students'), where('userId', '==', user.uid));
+    const studentQuery = query(collection(db, 'students'), where('userId', '==', userId));
     const studentsUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
         const updatedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
         setStudents(updatedStudents);
+        setDataLoading(false);
+    }, (error) => {
+      console.error("Error fetching students:", error);
+      setDataLoading(false);
     });
     
     const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const currentYear = new Date().getFullYear();
-    const helperDocId = `${user.uid}_${currentMonth}_${currentYear}`;
+    const helperDocId = `${userId}_${currentMonth}_${currentYear}`;
     const helperDocRef = doc(db, 'helpers', helperDocId);
     const helperUnsubscribe = onSnapshot(helperDocRef, (doc) => {
         if (doc.exists()) {
             setHelperAttendance(doc.data() as HelperAttendance);
         } else {
-             setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
+             setHelperAttendance({ userId: userId, month: currentMonth, year: currentYear, count: 0 });
         }
+    }, (error) => {
+      console.error("Error fetching helpers:", error);
     });
 
 
@@ -88,10 +53,9 @@ export function DashboardPage({ initialStudents, initialHelperAttendance }: Dash
         helperUnsubscribe();
     };
 
+  }, []);
 
-  }, [user, authLoading, router]);
-
-  if (authLoading || dataLoading) {
+  if (dataLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -115,10 +79,6 @@ export function DashboardPage({ initialStudents, initialHelperAttendance }: Dash
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
   
   return <Dashboard initialStudents={students} setStudents={setStudents} initialHelperAttendance={helperAttendance} setHelperAttendance={setHelperAttendance} />;

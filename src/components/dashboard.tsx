@@ -5,7 +5,6 @@ import type { Student, HelperAttendance } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, writeBatch, collection, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -17,10 +16,12 @@ interface DashboardProps {
     setHelperAttendance: React.Dispatch<React.SetStateAction<HelperAttendance | null>>;
 }
 
+const ANONYMOUS_USER_ID = 'shared-user-id';
+
 export function Dashboard({ initialStudents, setStudents: setStudentsProp, initialHelperAttendance, setHelperAttendance: setHelperAttendanceProp }: DashboardProps) {
   const students = initialStudents;
   const setStudents = setStudentsProp;
-  const { user } = useAuth();
+  const userId = ANONYMOUS_USER_ID;
   
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -30,11 +31,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
 
 
   const handleImport = async (file: File) => {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to import students.' });
-        return;
-    }
-
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result;
@@ -63,7 +59,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
           const importedStudents: Omit<Student, 'id' | 'avatarId'>[] = lines.slice(1).map((line) => {
             const values = line.split(',');
             return {
-              userId: user.uid,
+              userId: userId,
               name: values[nameIndex]?.trim() || 'No Name',
               points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
               birthday: birthdayIndex !== -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
@@ -110,16 +106,12 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
   };
   
   const handleAddStudent = async (newStudentData: Omit<Student, 'id' | 'avatarId' | 'attendance' | 'userId'>) => {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to add a student.' });
-        return;
-    }
     const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
     const avatarId = avatarIdOptions[students.length % avatarIdOptions.length];
 
     const studentToAdd = {
         ...newStudentData,
-        userId: user.uid,
+        userId: userId,
         avatarId: avatarId!,
         attendance: [],
     };
@@ -157,13 +149,12 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
   };
   
   const handleUpdateHelpers = async (newCount: number) => {
-    if (!user) return;
     const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const currentYear = new Date().getFullYear();
-    const docId = `${user.uid}_${currentMonth}_${currentYear}`;
+    const docId = `${userId}_${currentMonth}_${currentYear}`;
     
     const newHelperData: HelperAttendance = {
-      userId: user.uid,
+      userId: userId,
       month: currentMonth,
       year: currentYear,
       count: newCount,
@@ -263,7 +254,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
         students={students}
         presentCount={presentCount}
         onImport={handleImport}
-        user={user}
         onAddStudent={handleAddStudent}
         helperAttendance={helperAttendance}
         onUpdateHelpers={handleUpdateHelpers}

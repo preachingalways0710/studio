@@ -1,24 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get('session')?.value;
-  const { pathname } = request.nextUrl;
-  
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
-
-  // If the user has a session and is trying to access an auth page,
-  // redirect them to the dashboard.
-  if (sessionCookie && isAuthPage) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // If the user does not have a session and is trying to access a protected
-  // page (i.e., not an auth page), redirect them to the login page.
-  if (!sessionCookie && !isAuthPage) {
-     return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Otherwise, allow the request to proceed.
+  // Allow all requests to proceed without authentication.
   return NextResponse.next();
 }
 

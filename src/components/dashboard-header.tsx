@@ -4,21 +4,10 @@ import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { LineChart, Search, Users, Upload, LogOut, User as UserIcon, UserPlus, Minus, Plus } from 'lucide-react';
+import { LineChart, Search, Users, Upload, UserPlus, Minus, Plus } from 'lucide-react';
 import { MonthlyOverview } from './monthly-overview';
 import type { Student, HelperAttendance } from '@/lib/types';
-import type { User } from 'firebase/auth';
 import { AddStudentDialog } from './add-student-dialog';
-import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
 
 
 interface DashboardHeaderProps {
@@ -27,7 +16,6 @@ interface DashboardHeaderProps {
   students: Student[];
   presentCount: number;
   onImport: (file: File) => void;
-  user: User | null;
   onAddStudent: (newStudent: Omit<Student, 'id' | 'avatarId' | 'attendance' | 'userId'>) => Promise<void>;
   helperAttendance: HelperAttendance | null;
   onUpdateHelpers: (newCount: number) => void;
@@ -39,25 +27,10 @@ export function DashboardHeader({
   students,
   presentCount,
   onImport,
-  user,
   onAddStudent,
   helperAttendance,
   onUpdateHelpers,
 }: DashboardHeaderProps) {
-  
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-        await auth.signOut();
-        await fetch('/api/auth/logout', { method: 'POST' });
-        router.push('/login');
-    } catch(error) {
-        console.error("Logout failed", error);
-        // Still push to login page even if client-side or server-side revocation fails
-        router.push('/login');
-    }
-  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -150,24 +123,6 @@ export function DashboardHeader({
             </SheetContent>
         </Sheet>
         
-        {user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
-                <UserIcon className="h-4 w-4" />
-                <span className="sr-only">Toggle user menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
     </header>
   );
