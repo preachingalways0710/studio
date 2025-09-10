@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import type { Student, HelperAttendance } from '@/lib/types';
 import React from 'react';
 import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from './ui/button';
 import { ExternalLink } from 'lucide-react';

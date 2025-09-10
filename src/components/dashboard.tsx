@@ -5,7 +5,7 @@ import type { Student, HelperAttendance } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestore';
 import { doc, writeBatch, collection, updateDoc, addDoc, setDoc } from 'firebase/firestore';
 
 
