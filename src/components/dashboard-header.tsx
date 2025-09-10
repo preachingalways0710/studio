@@ -1,10 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { LineChart, Search, Users, Upload } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { LineChart, Search, Users, Upload, LogOut, User as UserIcon } from 'lucide-react';
 import { MonthlyOverview } from './monthly-overview';
 import type { Student } from '@/lib/types';
 import React from 'react';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 interface DashboardHeaderProps {
   searchTerm: string;
@@ -12,9 +16,14 @@ interface DashboardHeaderProps {
   students: Student[];
   presentCount: number;
   onImportClick: () => void;
+  user: User | null;
 }
 
-export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImportClick }: DashboardHeaderProps) {
+export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImportClick, user }: DashboardHeaderProps) {
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
   
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
@@ -54,6 +63,25 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
                  <MonthlyOverview students={students} />
             </SheetContent>
         </Sheet>
+        
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
+                <UserIcon className="h-4 w-4" />
+                <span className="sr-only">Toggle user menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

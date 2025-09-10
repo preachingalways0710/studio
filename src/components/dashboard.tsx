@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import React from 'react';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DashboardProps {
     initialStudents: Student[];
@@ -15,9 +16,9 @@ interface DashboardProps {
 }
 
 export function Dashboard({ initialStudents, setStudents: setStudentsProp }: DashboardProps) {
-  // The dashboard should not manage its own student state, but use the one passed in from the page
   const students = initialStudents;
   const setStudents = setStudentsProp;
+  const { user } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -186,6 +187,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         students={students}
         presentCount={presentCount}
         onImportClick={handleImportClick}
+        user={user}
       />
        <input
           type="file"
