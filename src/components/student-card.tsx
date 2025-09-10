@@ -201,14 +201,14 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
             <EditableField value={student.points} onSave={(v) => handleFieldSave('points', v)} inputType="number" />
           </div>
         
-        <div className="grid grid-cols-2 gap-2 items-center">
+        <div className="grid grid-cols-2 gap-2 items-stretch">
             {isPresentThisMonth ? (
-                <Button onClick={onUndoPresent} variant="outline" className="w-full">
+                <Button onClick={onUndoPresent} variant="outline" className="w-full h-auto">
                     <Undo2 className="mr-2 h-4 w-4" />
                     Undo
                 </Button>
             ) : (
-                <Button onClick={onMarkPresent} className="w-full">
+                <Button onClick={onMarkPresent} className="w-full h-auto">
                     <CalendarCheck className="mr-2 h-4 w-4" />
                     Presente
                 </Button>
@@ -256,12 +256,12 @@ function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'defau
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col items-center justify-between space-y-1 py-2 px-1 rounded-lg w-full">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <form onSubmit={handleSubmit} className="flex flex-col items-center justify-between space-y-1 py-1 px-1 rounded-lg w-full bg-background border rounded-md">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
                 <Icon className="h-3 w-3" />
                 <span>{label}</span>
             </div>
-            <div className="flex items-center gap-1 w-full">
+            <div className="flex items-center gap-1 w-full px-1 pb-1">
                 <Input
                     type="number"
                     min="1"

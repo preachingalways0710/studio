@@ -1,18 +1,33 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { LineChart, Search, Users } from 'lucide-react';
+import { LineChart, Search, Users, Upload } from 'lucide-react';
 import { MonthlyOverview } from './monthly-overview';
 import type { Student } from '@/lib/types';
+import React from 'react';
 
 interface DashboardHeaderProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   students: Student[];
   presentCount: number;
+  onImport: (file: File) => void;
 }
 
-export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount }: DashboardHeaderProps) {
+export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImport }: DashboardHeaderProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onImport(file);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+  
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
       <div className="flex items-center gap-4">
@@ -34,6 +49,19 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
           onChange={e => onSearchChange(e.target.value)}
           className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[280px]"
         />
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".csv"
+        />
+        <Button onClick={handleImportClick} variant="outline" size="icon" className="h-9 w-9">
+            <Upload className="h-4 w-4" />
+            <span className="sr-only">Import Students</span>
+        </Button>
+        
         <Sheet>
             <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9">

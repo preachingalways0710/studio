@@ -5,11 +5,80 @@ import type { Student } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
 
-export function Dashboard({ initialStudents }: { initialStudents: Student[] }) {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+interface DashboardProps {
+    initialStudents: Student[];
+    setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+}
+
+export function Dashboard({ initialStudents, setStudents: setStudentsProp }: DashboardProps) {
+  const [students, setStudentsState] = useState<Student[]>(initialStudents);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+
+  const setStudents = (newStudents: Student[] | ((prev: Student[]) => Student[])) => {
+      if (typeof newStudents === 'function') {
+          setStudentsState(newStudents);
+          setStudentsProp(newStudents);
+      } else {
+          setStudentsState(newStudents);
+          setStudentsProp(newStudents);
+      }
+  };
+
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result;
+      if (typeof text === 'string') {
+        try {
+          const lines = text.split('\n').filter(line => line.trim() !== '');
+          const header = lines[0].split(',').map(h => h.trim());
+          const nameIndex = header.indexOf('name');
+          const pointsIndex = header.indexOf('points');
+          const birthdayIndex = header.indexOf('birthday');
+
+          if (nameIndex === -1 || pointsIndex === -1 || birthdayIndex === -1) {
+            toast({
+              variant: 'destructive',
+              title: 'Invalid CSV Header',
+              description: 'CSV must include "name", "points", and "birthday" columns.',
+            });
+            return;
+          }
+
+          const importedStudents: Student[] = lines.slice(1).map((line, index) => {
+            const values = line.split(',');
+            return {
+              id: `imported-${Date.now()}-${index}`,
+              name: values[nameIndex].trim(),
+              points: parseInt(values[pointsIndex].trim(), 10) || 0,
+              birthday: values[birthdayIndex].trim(),
+              avatarId: `student-${(index % 6) + 1}`, // Cycle through placeholder avatars
+              attendance: [],
+            };
+          });
+
+          setStudents(prev => [...prev, ...importedStudents]);
+          toast({
+            title: 'Import Successful',
+            description: `${importedStudents.length} students have been added.`,
+          });
+        } catch (error) {
+          toast({
+            variant: 'destructive',
+            title: 'Import Failed',
+            description: 'There was an error processing the CSV file.',
+          });
+          console.error('CSV Import Error:', error);
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
   const updateStudent = (updatedStudent: Student) => {
     setStudents(prevStudents =>
@@ -104,9 +173,24 @@ export function Dashboard({ initialStudents }: { initialStudents: Student[] }) {
         onSearchChange={setSearchTerm}
         students={students}
         presentCount={presentCount}
+        onImport={handleImport}
       />
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
-        {filteredStudents.length > 0 ? (
+        {students.length === 0 ? (
+           <div className="text-center py-12">
+            <h2 className="text-2xl font-bold">Welcome to KidPoint Tracker</h2>
+            <p className="text-muted-foreground mt-2">
+              It looks like you don't have any students yet.
+              <br />
+              You can add students by importing a CSV file.
+            </p>
+            <Button onClick={() => document.querySelector<HTMLButtonElement>('button:has(svg[class*="lucide-upload"])')?.click()} className="mt-4">
+              <Upload className="mr-2 h-4 w-4"/>
+              Import Students from CSV
+            </Button>
+             <p className="text-xs text-muted-foreground mt-4">Your CSV should have 'name', 'points', and 'birthday' (YYYY-MM-DD) columns.</p>
+          </div>
+        ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredStudents.map(student => (
               <StudentCard
