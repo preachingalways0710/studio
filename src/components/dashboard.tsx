@@ -73,10 +73,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
           for (const [index, studentData] of importedStudents.entries()) {
               const docRef = doc(collection(db, 'students'));
               // Assign a rotating avatarId
-              const avatarId = `student-${(students.length + newStudentsWithIds.length) % 6 + 1}`;
+              const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
+              const avatarId = avatarIdOptions[(students.length + newStudentsWithIds.length) % avatarIdOptions.length];
               const studentWithAvatar = {
                 ...studentData,
-                avatarId: avatarId,
+                avatarId: avatarId!,
               };
               batch.set(docRef, studentWithAvatar);
               newStudentsWithIds.push({ ...studentWithAvatar, id: docRef.id });
@@ -198,14 +199,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
     student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const handleImportClick = () => {
-    // This now references an input inside the DashboardHeader, so we'll need to pass the file back
-    // The DashboardHeader will handle the click, but the import logic remains here.
-    // The functionality is now in the header, but we need a way to pass the file up.
-    // The new `onImport` prop on DashboardHeader will handle this.
-    // The button will be in the header, and it will call `handleImport` here.
-  };
-
   return (
     <div className="flex min-h-screen w-full flex-col">
       <DashboardHeader 
@@ -225,11 +218,8 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
               <br />
               You can add students by importing a CSV file.
             </p>
-            <Button onClick={handleImportClick} className="mt-4">
-              <Upload className="mr-2 h-4 w-4"/>
-              Import Students from CSV
-            </Button>
-             <p className="text-xs text-muted-foreground mt-4">Your CSV should have 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
+            {/* This button is now effectively controlled from the header */}
+            <p className="text-xs text-muted-foreground mt-4">Use the upload button in the header to import a CSV with 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

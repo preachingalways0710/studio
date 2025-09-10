@@ -28,7 +28,9 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
     if (file) {
       onImport(file);
       // Reset file input to allow re-uploading the same file
-      event.target.value = '';
+      if(event.target) {
+        event.target.value = '';
+      }
     }
   };
 
