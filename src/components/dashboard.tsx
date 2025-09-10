@@ -242,9 +242,9 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
     return students.filter(s => s.attendance.some(att => att.month === currentMonth && att.year === currentYear)).length;
   }, [students]);
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students
+    .filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
   
   return (
     <div className="flex min-h-screen w-full flex-col">
