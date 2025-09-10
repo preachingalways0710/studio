@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { auth } from '@/lib/firestore'; // Corrected import path
 
 // Mock user object for a non-authenticated setup
 const ANONYMOUS_USER = {
