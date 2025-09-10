@@ -68,25 +68,20 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
           });
 
           const batch = writeBatch(db);
-          const newStudentsWithIds: Student[] = [];
-          
           const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
 
-          for (const studentData of importedStudents) {
-              const docRef = doc(collection(db, 'students'));
-              
-              const avatarId = avatarIdOptions[(students.length + newStudentsWithIds.length) % avatarIdOptions.length];
-              const studentWithAvatar = {
-                ...studentData,
-                avatarId: avatarId!,
-              };
-              batch.set(docRef, studentWithAvatar);
-              newStudentsWithIds.push({ ...studentWithAvatar, id: docRef.id });
-          }
+          importedStudents.forEach((studentData, index) => {
+            const docRef = doc(collection(db, 'students'));
+            const avatarId = avatarIdOptions[(students.length + index) % avatarIdOptions.length];
+            const studentWithAvatar = {
+              ...studentData,
+              avatarId: avatarId!,
+            };
+            batch.set(docRef, studentWithAvatar);
+          });
           
           await batch.commit();
 
-          // State update will be handled by the real-time listener in dashboard-page
           toast({
             title: 'Import Successful',
             description: `${importedStudents.length} students have been saved and added to the dashboard.`,
@@ -118,7 +113,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
 
     try {
         await addDoc(collection(db, 'students'), studentToAdd);
-        // State update will be handled by the real-time listener in dashboard-page
         toast({
             title: 'Student Added',
             description: `${newStudentData.name} has been added to the dashboard.`,
@@ -170,8 +164,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
   };
 
   const updateStudent = (updatedStudent: Student) => {
-    // Optimistic update on the client is no longer needed
-    // as we rely on the Firestore listener to update the state.
     const { id, ...studentData } = updatedStudent;
     updateStudentInFirestore(updatedStudent.id, studentData);
   };
