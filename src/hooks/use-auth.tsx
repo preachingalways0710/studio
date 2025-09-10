@@ -26,7 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isAuthPage = pathname === '/login' || pathname === '/signup';
 
       if (newUser) {
-        // Only create session and redirect if user is on an auth page
+        // Only create session and redirect if user is on an auth page and has just logged in.
+        // The middleware will handle redirecting already-logged-in users.
         if (isAuthPage) {
             try {
               const idToken = await newUser.getIdToken();
@@ -35,16 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ idToken }),
               });
-              // A hard refresh is more reliable to trigger middleware after cookie is set.
-              window.location.href = '/';
+              // The middleware will handle the redirect on the next navigation or refresh.
+              // A soft router refresh is better than a hard page load.
+              router.push('/');
             } catch (error) {
                 console.error("Error setting session cookie:", error);
+                // If session creation fails, log the user out of firebase client-side
+                // to prevent an inconsistent state.
                 await auth.signOut();
-                await fetch('/api/auth/logout', { method: 'POST' });
             }
         }
       } else {
-        // If the user is logged out, ensure the session is cleared.
+        // User is logged out. Ensure the session cookie is cleared.
         await fetch('/api/auth/logout', { method: 'POST' });
         // If they are not on an auth page, redirect them to login.
         if (!isAuthPage) {
@@ -55,7 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [router, pathname]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, router]);
 
 
   return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
