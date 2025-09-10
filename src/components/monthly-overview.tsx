@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bot, LineChart } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
+import { SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 
 interface MonthlyOverviewProps {
   students: Student[];
@@ -51,38 +52,36 @@ export function MonthlyOverview({ students }: MonthlyOverviewProps) {
   };
 
   return (
-    <Card className="mt-8 col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-            <div>
-                <CardTitle className="flex items-center gap-2">
-                    <LineChart className="h-6 w-6" />
-                    Monthly Attendance Overview
-                </CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                    <Bot className="h-4 w-4" />
-                    AI-powered summary of attendance trends for the year.
-                </CardDescription>
-            </div>
-             <Button onClick={handleGenerate} disabled={isLoading}>
+    <>
+        <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+                <LineChart className="h-6 w-6" />
+                Monthly Attendance Overview
+            </SheetTitle>
+            <SheetDescription className="flex items-center gap-2">
+                 <Bot className="h-4 w-4" />
+                 AI-powered summary of attendance trends for the year.
+            </SheetDescription>
+        </SheetHeader>
+        <div className="py-4">
+            <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
                 {isLoading ? 'Generating...' : 'Generate Overview'}
             </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading && (
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-            </div>
-        )}
-        {error && <p className="text-destructive">{error}</p>}
-        {overview && <p className="text-sm text-foreground whitespace-pre-wrap">{overview}</p>}
-        {!isLoading && !overview && !error && (
-            <p className="text-sm text-muted-foreground">Click the "Generate Overview" button to see an AI-generated summary of this year's attendance.</p>
-        )}
-      </CardContent>
-    </Card>
+        <div className="flex-grow rounded-lg border bg-card text-card-foreground shadow-sm p-4 min-h-[200px]">
+            {isLoading && (
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+            )}
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            {overview && <p className="text-sm text-foreground whitespace-pre-wrap">{overview}</p>}
+            {!isLoading && !overview && !error && (
+                <p className="text-sm text-muted-foreground text-center pt-8">Click the button to generate an AI-powered summary of this year's attendance.</p>
+            )}
+        </div>
+    </>
   );
 }

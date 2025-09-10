@@ -9,18 +9,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Edit2, Star, Users, ShoppingCart, Undo2, CalendarCheck } from 'lucide-react';
+import { Edit2, Star, Users, ShoppingCart, Undo2, CalendarCheck, GripHorizontal, PartyPopper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
 
 interface EditableFieldProps {
   value: string | number;
   onSave: (newValue: string) => void;
-  inputType?: 'text' | 'number' | 'date';
+  inputType?: 'text' | 'number';
+  className?: string;
+  textClassName?: string;
 }
 
-function EditableField({ value, onSave, inputType = 'text' }: EditableFieldProps) {
+function EditableField({ value, onSave, inputType = 'text', className, textClassName }: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(String(value));
 
@@ -30,9 +34,8 @@ function EditableField({ value, onSave, inputType = 'text' }: EditableFieldProps
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSave();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Enter') handleSave();
+    else if (e.key === 'Escape') {
       setIsEditing(false);
       setCurrentValue(String(value));
     }
@@ -47,19 +50,18 @@ function EditableField({ value, onSave, inputType = 'text' }: EditableFieldProps
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="h-8"
+        className={cn("h-8", className)}
       />
     );
   }
 
   return (
-    <div className="group flex items-center gap-2" onClick={() => setIsEditing(true)}>
+    <div className={cn("group flex items-center gap-2", textClassName)} onClick={() => setIsEditing(true)}>
       <span>{value}</span>
       <Edit2 className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
     </div>
   );
 }
-
 
 interface StudentCardProps {
   student: Student;
@@ -95,9 +97,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     toast({ title: 'Student Updated', description: `${student.name}'s ${field} has been updated.` });
   };
   
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleAvatarClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,23 +106,39 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
       reader.onload = (event) => {
         const newAvatarUrl = event.target?.result as string;
         setAvatarUrl(newAvatarUrl);
-        // Here you would typically upload the file and get a new URL
-        // For now, we just update it visually on the client
-        toast({ title: "Avatar Updated", description: "The new avatar is shown. Note: This is a preview and isn't saved permanently."});
+        toast({ title: "Avatar Updated", description: "The new avatar is shown as a preview and is not saved."});
       };
       reader.readAsDataURL(file);
     }
   };
-  
-  const handleFriendPoints = (friendCount: number) => {
-    if (friendCount <= 0) return;
-    const points = friendCount * 30;
-    const updatedStudent = { ...student, points: student.points + points };
+
+  const applyPoints = (points: number, description: string, undoDescription: string) => {
+    const updatedStudent = { ...student, points: Math.max(0, student.points + points) };
     onUpdateStudent(updatedStudent);
     toast({
       title: 'Points Updated!',
-      description: `${student.name} received ${points} points for inviting ${friendCount} friend(s).`,
+      description,
+      action: (
+        <Button variant="ghost" size="sm" onClick={() => undoPoints(points, undoDescription)}>
+          <Undo2 className="mr-2" /> Undo
+        </Button>
+      ),
     });
+  };
+
+  const undoPoints = (points: number, description: string) => {
+    const updatedStudent = { ...student, points: Math.max(0, student.points - points) };
+    onUpdateStudent(updatedStudent);
+    toast({
+      title: 'Points Restored!',
+      description,
+    });
+  }
+
+  const handleFriendPoints = (friendCount: number) => {
+    if (friendCount <= 0) return;
+    const points = friendCount * 30;
+    applyPoints(points, `${student.name} received ${points} points for inviting ${friendCount} friend(s).`, `Removed ${points} points from ${student.name}.`);
   };
 
   const handlePurchase = (cost: number) => {
@@ -131,74 +147,58 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
       toast({
         variant: 'destructive',
         title: 'Insufficient Points',
-        description: `${student.name} does not have enough points for this purchase.`,
+        description: `${student.name} does not have enough points.`,
       });
       return;
     }
-    const updatedStudent = { ...student, points: student.points - cost };
-    onUpdateStudent(updatedStudent);
-    toast({
-      title: 'Purchase Successful',
-      description: `${student.name} spent ${cost} points.`,
-    });
+    const pointsToDeduct = -cost;
+    applyPoints(pointsToDeduct, `${student.name} spent ${cost} points.`, `Restored ${cost} points to ${student.name}.`);
   };
   
-  const [friendCount, setFriendCount] = useState('');
-  const [purchaseCost, setPurchaseCost] = useState('');
-
-  const handleFriendsSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const count = parseInt(friendCount, 10);
-    if (!isNaN(count) && count > 0) {
-      handleFriendPoints(count);
-      setFriendCount('');
-    }
-  };
-
-  const handlePurchaseSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cost = parseInt(purchaseCost, 10);
-    if (!isNaN(cost) && cost > 0) {
-      handlePurchase(cost);
-      setPurchaseCost('');
-    }
-  };
-
-
   return (
     <Card className="flex flex-col">
-       <CardHeader className="items-center text-center pt-6">
-        <div className="relative">
-          <Avatar className="h-24 w-24 border-2 border-primary/50 cursor-pointer" onClick={handleAvatarClick}>
+       <CardHeader className="items-center text-center p-4 relative">
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7">
+                    <PartyPopper className="h-4 w-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <Calendar
+                    mode="single"
+                    selected={new Date(student.birthday)}
+                    onSelect={(date) => {
+                        if (date) {
+                            handleFieldSave('birthday', format(date, 'yyyy-MM-dd'))
+                        }
+                    }}
+                    initialFocus
+                />
+            </PopoverContent>
+        </Popover>
+
+        <div className="relative mt-2">
+          <Avatar className="h-32 w-32 border-4 border-background shadow-md cursor-pointer" onClick={handleAvatarClick}>
             {avatarUrl && <AvatarImage src={avatarUrl} alt={student.name} data-ai-hint={avatar?.imageHint}/>}
-            <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+            <AvatarFallback className="text-4xl">{student.name.charAt(0)}</AvatarFallback>
           </Avatar>
-           <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-          <div className="absolute bottom-1 right-1 bg-background/80 rounded-full p-1">
+           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+          <div className="absolute bottom-1 right-1 bg-background/80 rounded-full p-2 cursor-pointer" onClick={handleAvatarClick}>
              <Edit2 className="h-4 w-4 text-muted-foreground/80"/>
           </div>
         </div>
-        <div className="grid gap-1 mt-4">
-          <CardTitle className="font-headline text-xl">
-             <EditableField value={student.name} onSave={(v) => handleFieldSave('name', v)} />
+        <div className="grid gap-0.5 mt-3">
+          <CardTitle className="font-headline text-2xl">
+             <EditableField value={student.name} onSave={(v) => handleFieldSave('name', v)} textClassName="justify-center"/>
           </CardTitle>
-          <div className="text-sm text-muted-foreground flex items-center justify-center gap-4">
-            <EditableField value={student.birthday} onSave={(v) => handleFieldSave('birthday', v)} inputType="date" />
-            <span>({age} yrs)</span>
-          </div>
+          <p className="text-sm text-muted-foreground">{age} years old</p>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow text-center">
-         <div className="flex items-center justify-center gap-2 font-bold text-2xl mb-4">
-            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
+      <CardContent className="flex-grow text-center px-4 pb-4">
+         <div className="flex items-center justify-center gap-2 font-bold text-3xl mb-4">
+            <Star className="h-7 w-7 text-yellow-400 fill-yellow-400" />
             <EditableField value={student.points} onSave={(v) => handleFieldSave('points', v)} inputType="number" />
-            <span className="text-sm font-medium text-muted-foreground">points</span>
           </div>
 
         {isPresentThisMonth ? (
@@ -213,40 +213,77 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
           </Button>
         )}
       </CardContent>
-       <CardFooter className="flex-col items-start gap-4 p-4 pt-0">
-          <Separator />
-          <form onSubmit={handleFriendsSubmit} className="space-y-2 w-full">
-            <Label htmlFor={`friends-${student.id}`} className="flex items-center gap-2 text-sm"><Users className="h-4 w-4" />Friends Invited (+30pts each)</Label>
-            <div className="flex gap-2">
-              <Input
-                id={`friends-${student.id}`}
-                type="number"
-                min="1"
-                placeholder="0"
-                value={friendCount}
-                onChange={e => setFriendCount(e.target.value)}
-                className="flex-1 h-9"
-              />
-              <Button type="submit" size="sm">Add</Button>
-            </div>
-          </form>
-          <Separator />
-          <form onSubmit={handlePurchaseSubmit} className="space-y-2 w-full">
-            <Label htmlFor={`purchase-${student.id}`} className="flex items-center gap-2 text-sm"><ShoppingCart className="h-4 w-4" />Store Purchase</Label>
-             <div className="flex gap-2">
-              <Input
-                id={`purchase-${student.id}`}
-                type="number"
-                min="1"
-                placeholder="e.g., 50"
-                value={purchaseCost}
-                onChange={e => setPurchaseCost(e.target.value)}
-                className="flex-1 h-9"
-              />
-              <Button type="submit" variant="secondary" size="sm">Spend</Button>
-            </div>
-          </form>
+       <CardFooter className="grid grid-cols-3 gap-2 p-2 pt-0 border-t bg-muted/50">
+         <ActionItem
+            icon={Users}
+            label="Friends"
+            pointsLabel="+30 ea."
+            onAction={handleFriendPoints}
+         />
+         <ActionItem
+            icon={GripHorizontal}
+            label=" "
+            pointsLabel=" "
+            onAction={() => {}}
+            isSeparator
+         />
+         <ActionItem
+            icon={ShoppingCart}
+            label="Purchase"
+            pointsLabel="Spend"
+            onAction={handlePurchase}
+            variant="secondary"
+         />
        </CardFooter>
     </Card>
   );
+}
+
+
+function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'default', isSeparator = false }: {
+    icon: React.ElementType,
+    label: string,
+    pointsLabel: string,
+    onAction: (value: number) => void,
+    variant?: 'default' | 'secondary',
+    isSeparator?: boolean
+}) {
+    const [value, setValue] = useState('');
+    
+    if (isSeparator) {
+        return <div className="flex flex-col items-center justify-center h-full">
+            <Separator orientation="vertical" className="h-10" />
+        </div>;
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const numValue = parseInt(value, 10);
+        if (!isNaN(numValue) && numValue > 0) {
+            onAction(numValue);
+            setValue('');
+        }
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-col items-center justify-between space-y-1 py-2 px-1 rounded-lg">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Icon className="h-3 w-3" />
+                <span>{label}</span>
+            </div>
+            <div className="flex items-center gap-1">
+                <Input
+                    type="number"
+                    min="1"
+                    placeholder="0"
+                    value={value}
+                    onChange={e => setValue(e.target.value)}
+                    className="h-7 w-12 text-center p-1"
+                />
+                <Button type="submit" size="sm" variant={variant} className="h-7 text-xs px-2">
+                    {pointsLabel}
+                </Button>
+            </div>
+        </form>
+    );
 }
