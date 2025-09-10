@@ -18,6 +18,7 @@ import type { Student, HelperAttendance } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { AddStudentDialog } from './add-student-dialog';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
 
 
 interface DashboardHeaderProps {
@@ -48,11 +49,12 @@ export function DashboardHeader({
 
   const handleLogout = async () => {
     try {
+        await auth.signOut();
         await fetch('/api/auth/logout', { method: 'POST' });
         router.push('/login');
     } catch(error) {
         console.error("Logout failed", error);
-        // Still push to login page even if server-side revocation fails
+        // Still push to login page even if client-side or server-side revocation fails
         router.push('/login');
     }
   };
