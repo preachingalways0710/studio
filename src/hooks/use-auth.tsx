@@ -23,27 +23,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setUser(newUser);
       
+      const isAuthPage = pathname === '/login' || pathname === '/signup';
+
       if (newUser) {
-        try {
-          const idToken = await newUser.getIdToken();
-          await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          });
-          // After successful session creation, the middleware will handle redirection.
-          if (pathname === '/login' || pathname === '/signup') {
-            // A hard refresh is more reliable to trigger middleware after cookie is set.
-            window.location.href = '/';
-          }
-        } catch (error) {
-            console.error("Error setting session cookie:", error);
-            await auth.signOut();
-            await fetch('/api/auth/logout', { method: 'POST' });
+        // Only create session and redirect if user is on an auth page
+        if (isAuthPage) {
+            try {
+              const idToken = await newUser.getIdToken();
+              await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+              });
+              // A hard refresh is more reliable to trigger middleware after cookie is set.
+              window.location.href = '/';
+            } catch (error) {
+                console.error("Error setting session cookie:", error);
+                await auth.signOut();
+                await fetch('/api/auth/logout', { method: 'POST' });
+            }
         }
       } else {
+        // If the user is logged out, ensure the session is cleared.
         await fetch('/api/auth/logout', { method: 'POST' });
-        if (pathname !== '/login' && pathname !== '/signup') {
+        // If they are not on an auth page, redirect them to login.
+        if (!isAuthPage) {
             router.push('/login');
         }
       }

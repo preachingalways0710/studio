@@ -9,7 +9,9 @@ async function verifySessionCookie(session: string | undefined) {
         return decodedClaims;
     } catch (error) {
         // Session cookie is invalid.
-        console.error('Error verifying session cookie in middleware:', error);
+        // This can happen if the cookie is old or malformed.
+        // It's not a server error, so we can log it for debugging if needed.
+        // console.error('Error verifying session cookie in middleware:', error);
         return null;
     }
 }
@@ -47,7 +49,7 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes, we will let them handle their own auth)
+     * - api (API routes, which have their own auth logic or are public)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
