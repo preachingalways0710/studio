@@ -14,9 +14,10 @@ interface DashboardProps {
     initialStudents: Student[];
     setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
     initialHelperAttendance: HelperAttendance | null;
+    setHelperAttendance: React.Dispatch<React.SetStateAction<HelperAttendance | null>>;
 }
 
-export function Dashboard({ initialStudents, setStudents: setStudentsProp, initialHelperAttendance }: DashboardProps) {
+export function Dashboard({ initialStudents, setStudents: setStudentsProp, initialHelperAttendance, setHelperAttendance: setHelperAttendanceProp }: DashboardProps) {
   const students = initialStudents;
   const setStudents = setStudentsProp;
   const { user } = useAuth();
@@ -24,11 +25,8 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(initialHelperAttendance);
-
-  useEffect(() => {
-    setHelperAttendance(initialHelperAttendance);
-  }, [initialHelperAttendance]);
+  const helperAttendance = initialHelperAttendance;
+  const setHelperAttendance = setHelperAttendanceProp;
 
 
   const handleImport = async (file: File) => {
@@ -92,7 +90,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
           
           await batch.commit();
 
-          setStudents(prev => [...prev, ...newStudentsWithIds]);
+          // State update will be handled by the real-time listener in dashboard-page
           toast({
             title: 'Import Successful',
             description: `${importedStudents.length} students have been saved and added to the dashboard.`,
@@ -127,12 +125,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
     };
 
     try {
-        const docRef = await addDoc(collection(db, 'students'), studentToAdd);
-        const newStudentWithId: Student = { ...studentToAdd, id: docRef.id };
-        setStudents(prev => [...prev, newStudentWithId]);
+        await addDoc(collection(db, 'students'), studentToAdd);
+        // State update will be handled by the real-time listener in dashboard-page
         toast({
             title: 'Student Added',
-            description: `${newStudentWithId.name} has been added to the dashboard.`,
+            description: `${newStudentData.name} has been added to the dashboard.`,
         });
     } catch (error) {
         toast({
@@ -174,7 +171,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
 
     try {
       await setDoc(doc(db, 'helpers', docId), newHelperData);
-      setHelperAttendance(newHelperData);
+      // State will be updated by the listener
     } catch (error) {
        console.error("Error updating helpers:", error);
        toast({ variant: "destructive", title: "Update Failed", description: "Could not save helper count." });
@@ -182,11 +179,8 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
   };
 
   const updateStudent = (updatedStudent: Student) => {
-    setStudents(prevStudents =>
-      prevStudents.map(s =>
-        s.id === updatedStudent.id ? updatedStudent : s
-      )
-    );
+    // Optimistic update on the client is no longer needed
+    // as we rely on the Firestore listener to update the state.
     const { id, ...studentData } = updatedStudent;
     updateStudentInFirestore(updatedStudent.id, studentData);
   };

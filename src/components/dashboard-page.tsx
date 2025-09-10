@@ -6,18 +6,8 @@ import type { Student, HelperAttendance } from '@/lib/types';
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  doc,
-  getDoc,
-  onSnapshot,
-} from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getAuth as getFirebaseAuth, onAuthStateChanged } from 'firebase/auth';
-import { User } from 'firebase/auth';
 
 interface DashboardPageProps {
   initialStudents: Student[];
@@ -29,18 +19,79 @@ export function DashboardPage({ initialStudents, initialHelperAttendance }: Dash
   const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(initialHelperAttendance);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  // The `initialLoading` state is no longer needed because the data is provided by the server component.
-  // We only need to wait for the authentication to be confirmed.
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.push('/login');
+      return;
     }
+
+    const fetchData = async () => {
+      setDataLoading(true);
+      try {
+        // Fetch Students
+        const studentQuery = query(collection(db, 'students'), where('userId', '==', user.uid));
+        const studentSnapshot = await getDocs(studentQuery);
+        const fetchedStudents = studentSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Student[];
+        setStudents(fetchedStudents);
+
+        // Fetch Helper Attendance
+        const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+        const currentYear = new Date().getFullYear();
+        const helperDocId = `${user.uid}_${currentMonth}_${currentYear}`;
+        const helperDocRef = doc(db, 'helpers', helperDocId);
+        const helperDocSnap = await getDoc(helperDocRef);
+
+        if (helperDocSnap.exists()) {
+          setHelperAttendance(helperDocSnap.data() as HelperAttendance);
+        } else {
+          setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
+        }
+      } catch (error) {
+        console.error('Error fetching data on client:', error);
+        setStudents([]);
+        setHelperAttendance(null);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Set up listeners for real-time updates
+    const studentQuery = query(collection(db, 'students'), where('userId', '==', user.uid));
+    const studentsUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
+        const updatedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
+        setStudents(updatedStudents);
+    });
+    
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    const currentYear = new Date().getFullYear();
+    const helperDocId = `${user.uid}_${currentMonth}_${currentYear}`;
+    const helperDocRef = doc(db, 'helpers', helperDocId);
+    const helperUnsubscribe = onSnapshot(helperDocRef, (doc) => {
+        if (doc.exists()) {
+            setHelperAttendance(doc.data() as HelperAttendance);
+        } else {
+             setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
+        }
+    });
+
+
+    return () => {
+        studentsUnsubscribe();
+        helperUnsubscribe();
+    };
+
+
   }, [user, authLoading, router]);
 
-  if (authLoading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -66,10 +117,9 @@ export function DashboardPage({ initialStudents, initialHelperAttendance }: Dash
     );
   }
 
-  // Fallback in case the hook-based redirection is slow.
   if (!user) {
     return null;
   }
   
-  return <Dashboard initialStudents={students} setStudents={setStudents} initialHelperAttendance={helperAttendance} />;
+  return <Dashboard initialStudents={students} setStudents={setStudents} initialHelperAttendance={helperAttendance} setHelperAttendance={setHelperAttendance} />;
 }
