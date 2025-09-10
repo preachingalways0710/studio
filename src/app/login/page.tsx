@@ -8,21 +8,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // The useAuth hook and middleware will handle the redirect after 
-      // successful login and session cookie creation.
-      await signInWithEmailAndPassword(auth, email, password);
-      // We don't need to push the router here, the auth hook and middleware take care of it.
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+
+      // Explicitly wait for the session to be created on the server
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create session.');
+      }
+      
+      // Now that the session is created, we can safely redirect.
+      // The middleware will now correctly see the session cookie.
+      router.push('/');
+
     } catch (error: any) {
       toast({
         variant: 'destructive',

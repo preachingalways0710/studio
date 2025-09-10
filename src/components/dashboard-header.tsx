@@ -52,6 +52,8 @@ export function DashboardHeader({
         router.push('/login');
     } catch(error) {
         console.error("Logout failed", error);
+        // Still push to login page even if server-side revocation fails
+        router.push('/login');
     }
   };
   
