@@ -56,14 +56,13 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
             return;
           }
 
-          const importedStudents: Omit<Student, 'id'>[] = lines.slice(1).map((line, index) => {
+          const importedStudents: Omit<Student, 'id' | 'avatarId'>[] = lines.slice(1).map((line) => {
             const values = line.split(',');
             return {
               userId: user.uid,
               name: values[nameIndex]?.trim() || 'No Name',
               points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
               birthday: birthdayIndex !== -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
-              avatarId: `student-${(index % 6) + 1}`,
               attendance: [],
             };
           });
@@ -71,10 +70,14 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
           const batch = writeBatch(db);
           const newStudentsWithIds: Student[] = [];
 
-          for (const studentData of importedStudents) {
+          for (const [index, studentData] of importedStudents.entries()) {
               const docRef = doc(collection(db, 'students'));
-              batch.set(docRef, studentData);
-              newStudentsWithIds.push({ ...studentData, id: docRef.id });
+              const studentWithAvatar = {
+                ...studentData,
+                avatarId: `student-${(index % 6) + 1}`
+              };
+              batch.set(docRef, studentWithAvatar);
+              newStudentsWithIds.push({ ...studentWithAvatar, id: docRef.id });
           }
           
           await batch.commit();
@@ -82,7 +85,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
           setStudents(prev => [...prev, ...newStudentsWithIds]);
           toast({
             title: 'Import Successful',
-            description: `${importedStudents.length} students have been saved to Firestore.`,
+            description: `${importedStudents.length} students have been saved and added to the dashboard.`,
           });
 
         } catch (error) {
