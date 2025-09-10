@@ -7,6 +7,7 @@ import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
+import React from 'react';
 
 interface DashboardProps {
     initialStudents: Student[];
@@ -55,7 +56,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
               id: `imported-${Date.now()}-${index}`,
               name: values[nameIndex]?.trim() || 'No Name',
               points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
-              birthday: birthdayIndex !== -1 ? values[birthdayIndex]?.trim() : '2018-01-01', // Default birthday if not provided
+              birthday: birthdayIndex !== -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
               avatarId: `student-${(index % 6) + 1}`,
               attendance: [],
             };
@@ -165,6 +166,19 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImport(file);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -173,8 +187,15 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         onSearchChange={setSearchTerm}
         students={students}
         presentCount={presentCount}
-        onImport={handleImport}
+        onImportClick={handleImportClick}
       />
+       <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".csv"
+        />
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         {students.length === 0 ? (
            <div className="text-center py-12">
@@ -184,11 +205,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
               <br />
               You can add students by importing a CSV file.
             </p>
-            <Button onClick={() => document.querySelector<HTMLButtonElement>('button:has(svg[class*="lucide-upload"])')?.click()} className="mt-4">
+            <Button onClick={handleImportClick} className="mt-4">
               <Upload className="mr-2 h-4 w-4"/>
               Import Students from CSV
             </Button>
-             <p className="text-xs text-muted-foreground mt-4">Your CSV should have at least 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
+             <p className="text-xs text-muted-foreground mt-4">Your CSV should have 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

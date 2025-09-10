@@ -11,22 +11,10 @@ interface DashboardHeaderProps {
   onSearchChange: (term: string) => void;
   students: Student[];
   presentCount: number;
-  onImport: (file: File) => void;
+  onImportClick: () => void;
 }
 
-export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImport }: DashboardHeaderProps) {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onImport(file);
-    }
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImportClick }: DashboardHeaderProps) {
   
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
@@ -50,14 +38,7 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
           className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[280px]"
         />
 
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept=".csv"
-        />
-        <Button onClick={handleImportClick} variant="outline" size="icon" className="h-9 w-9">
+        <Button onClick={onImportClick} variant="outline" size="icon" className="h-9 w-9">
             <Upload className="h-4 w-4" />
             <span className="sr-only">Import Students</span>
         </Button>
