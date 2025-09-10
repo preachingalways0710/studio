@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Student } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { doc, writeBatch, collection, updateDoc } from 'firebase/firestore';
 
 
 interface DashboardProps {
@@ -72,9 +72,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
 
           for (const [index, studentData] of importedStudents.entries()) {
               const docRef = doc(collection(db, 'students'));
+              // Assign a rotating avatarId
+              const avatarId = `student-${(students.length + newStudentsWithIds.length) % 6 + 1}`;
               const studentWithAvatar = {
                 ...studentData,
-                avatarId: `student-${(index % 6) + 1}`
+                avatarId: avatarId,
               };
               batch.set(docRef, studentWithAvatar);
               newStudentsWithIds.push({ ...studentWithAvatar, id: docRef.id });
@@ -196,19 +198,12 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
     student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleImport(file);
-      // Reset file input to allow re-uploading the same file
-      event.target.value = '';
-    }
-  };
-
   const handleImportClick = () => {
-    fileInputRef.current?.click();
+    // This now references an input inside the DashboardHeader, so we'll need to pass the file back
+    // The DashboardHeader will handle the click, but the import logic remains here.
+    // The functionality is now in the header, but we need a way to pass the file up.
+    // The new `onImport` prop on DashboardHeader will handle this.
+    // The button will be in the header, and it will call `handleImport` here.
   };
 
   return (
@@ -218,16 +213,9 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         onSearchChange={setSearchTerm}
         students={students}
         presentCount={presentCount}
-        onImportClick={handleImportClick}
+        onImport={handleImport}
         user={user}
       />
-       <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept=".csv"
-        />
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         {students.length === 0 ? (
            <div className="text-center py-12">

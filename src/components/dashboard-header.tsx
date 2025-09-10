@@ -15,11 +15,26 @@ interface DashboardHeaderProps {
   onSearchChange: (term: string) => void;
   students: Student[];
   presentCount: number;
-  onImportClick: () => void;
+  onImport: (file: File) => void;
   user: User | null;
 }
 
-export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImportClick, user }: DashboardHeaderProps) {
+export function DashboardHeader({ searchTerm, onSearchChange, students, presentCount, onImport, user }: DashboardHeaderProps) {
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onImport(file);
+      // Reset file input to allow re-uploading the same file
+      event.target.value = '';
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
   
   const handleLogout = async () => {
     await signOut(auth);
@@ -27,6 +42,13 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
   
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+       <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".csv"
+        />
       <div className="flex items-center gap-4">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         <div className="flex flex-col">
@@ -47,7 +69,7 @@ export function DashboardHeader({ searchTerm, onSearchChange, students, presentC
           className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[280px]"
         />
 
-        <Button onClick={onImportClick} variant="outline" size="icon" className="h-9 w-9">
+        <Button onClick={handleImportClick} variant="outline" size="icon" className="h-9 w-9">
             <Upload className="h-4 w-4" />
             <span className="sr-only">Import Students</span>
         </Button>
