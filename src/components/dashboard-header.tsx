@@ -17,6 +17,7 @@ import { MonthlyOverview } from './monthly-overview';
 import type { Student, HelperAttendance } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { AddStudentDialog } from './add-student-dialog';
+import { logoutAction } from '@/app/actions';
 
 
 interface DashboardHeaderProps {
@@ -44,7 +45,7 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   
   const handleLogout = async () => {
-    await signOut(auth);
+    await logoutAction();
   };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,7 +150,7 @@ export function DashboardHeader({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => auth.signOut()}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
@@ -160,7 +161,3 @@ export function DashboardHeader({
     </header>
   );
 }
-
-// NOTE: auth is not defined in this file. It is a global from a script tag.
-// This is a temporary solution until we can refactor the auth logic.
-declare const auth: any;

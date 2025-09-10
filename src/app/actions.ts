@@ -2,6 +2,9 @@
 
 import { getMonthlyAttendanceOverview } from '@/ai/flows/monthly-attendance-overview';
 import { generateStudents, GenerateStudentsOutput } from '@/ai/flows/generate-students';
+import { cookies } from 'next/headers';
+import { authAdmin } from '@/lib/firebase-admin';
+import { redirect } from 'next/navigation';
 
 export async function generateMonthlyOverviewAction(attendanceData: string) {
   if (!attendanceData) {
@@ -30,4 +33,18 @@ export async function generateStudentsAction(studentInfo: string): Promise<Gener
     console.error('Error generating students:', error);
     return null;
   }
+}
+
+export async function logoutAction() {
+  const sessionCookie = cookies().get('session')?.value;
+  if (sessionCookie) {
+    try {
+      const decodedClaims = await authAdmin.verifySessionCookie(sessionCookie);
+      await authAdmin.revokeRefreshTokens(decodedClaims.sub);
+    } catch (error) {
+      // Ignore errors if cookie is invalid.
+    }
+  }
+  cookies().delete('session');
+  redirect('/login');
 }
