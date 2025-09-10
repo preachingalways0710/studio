@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
+import { storage } from '@/lib/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 
 interface EditableFieldProps {
   value: string | number;
@@ -74,8 +77,10 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const age = student.birthday ? getAge(student.birthday) : null;
-  const avatar = PlaceHolderImages.find(img => img.id === student.avatarId);
-  const [avatarUrl, setAvatarUrl] = useState(avatar?.imageUrl);
+  const placeholderAvatar = PlaceHolderImages.find(img => img.id === student.avatarId);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const avatarSrc = student.avatarUrl || placeholderAvatar?.imageUrl;
 
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
@@ -97,18 +102,38 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     toast({ title: 'Student Updated', description: `${student.name}'s ${field} has been updated.` });
   };
   
-  const handleAvatarClick = () => fileInputRef.current?.click();
+  const handleAvatarClick = () => {
+    if (isUploading) return;
+    fileInputRef.current?.click();
+  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newAvatarUrl = event.target?.result as string;
-        setAvatarUrl(newAvatarUrl);
-        toast({ title: "Avatar Updated", description: "The new avatar is shown as a preview and is not saved to the database."});
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    toast({ title: "Uploading Avatar...", description: "Please wait while the image is uploaded."});
+
+    try {
+      // Create a storage reference
+      const storageRef = ref(storage, `avatars/${student.id}/${file.name}`);
+
+      // Upload the file
+      const snapshot = await uploadBytes(storageRef, file);
+
+      // Get the download URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      // Update the student document in Firestore
+      onUpdateStudent({ avatarUrl: downloadURL });
+
+      toast({ title: "Avatar Updated!", description: `${student.name}'s avatar has been saved.`});
+
+    } catch (error) {
+      console.error("Avatar Upload Error:", error);
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not save the new avatar.'});
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -184,13 +209,16 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
         </Popover>
 
         <div className="relative mt-2">
-          <Avatar className="h-32 w-32 border-4 border-background shadow-md cursor-pointer" onClick={handleAvatarClick}>
-            {avatarUrl && <AvatarImage src={avatarUrl} alt={student.name} data-ai-hint={avatar?.imageHint}/>}
+          <Avatar className={cn("h-32 w-32 border-4 border-background shadow-md", !isUploading && "cursor-pointer")} onClick={handleAvatarClick}>
+            {avatarSrc && <AvatarImage src={avatarSrc} alt={student.name} data-ai-hint={placeholderAvatar?.imageHint}/>}
             <AvatarFallback className="text-4xl">{student.name.charAt(0)}</AvatarFallback>
           </Avatar>
-           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-          <div className="absolute bottom-1 right-1 bg-background/80 rounded-full p-2 cursor-pointer" onClick={handleAvatarClick}>
-             <Edit2 className="h-4 w-4 text-muted-foreground/80"/>
+           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" disabled={isUploading}/>
+          <div className={cn("absolute bottom-1 right-1 bg-background/80 rounded-full p-2", !isUploading && "cursor-pointer")} onClick={handleAvatarClick}>
+             {isUploading ? 
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div> : 
+                <Edit2 className="h-4 w-4 text-muted-foreground/80"/>
+             }
           </div>
         </div>
         <div className="grid gap-0.5 mt-3">

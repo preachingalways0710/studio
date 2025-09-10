@@ -3,6 +3,7 @@ export interface Student {
   userId: string;
   name: string;
   avatarId: string;
+  avatarUrl?: string; // To store custom uploaded avatar URLs
   birthday: string; // YYYY-MM-DD
   points: number;
   attendance: {
