@@ -31,19 +31,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
           });
-          // THE FIX: Remove client-side redirect. The middleware will handle this.
-          // After the session is set, a refresh or navigation will trigger the
-          // middleware, which will redirect from /login if authenticated.
-          // For a smoother UX, we can force a reload to trigger middleware.
+          // The middleware will handle redirects.
+          // For a smoother user experience, if the user is on the login/signup page,
+          // we can perform a refresh to trigger the middleware.
           if (pathname === '/login' || pathname === '/signup') {
-            router.refresh(); 
+            router.refresh();
           }
         } catch (error) {
             console.error("Error setting session cookie:", error);
+            // If session creation fails, log the user out on the client and server
+            await auth.signOut();
             await fetch('/api/auth/logout', { method: 'POST' });
         }
       } else {
+        // User logged out or no user
         await fetch('/api/auth/logout', { method: 'POST' });
+        // Let the middleware handle redirecting to login if needed.
         if (pathname !== '/login' && pathname !== '/signup') {
             router.push('/login');
         }
