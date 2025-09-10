@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 
 
 interface DashboardProps {
@@ -98,6 +98,19 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
     reader.readAsText(file);
   };
 
+  const updateStudentInFirestore = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>) => {
+    const studentRef = doc(db, 'students', studentId);
+    try {
+      await updateDoc(studentRef, updatedData);
+    } catch (error) {
+      console.error('Error updating student in Firestore:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Database Error',
+        description: 'Could not save student changes to the database.',
+      });
+    }
+  };
 
   const updateStudent = (updatedStudent: Student) => {
     setStudents(prevStudents =>
@@ -105,6 +118,9 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         s.id === updatedStudent.id ? updatedStudent : s
       )
     );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...studentData } = updatedStudent;
+    updateStudentInFirestore(updatedStudent.id, studentData);
   };
   
   const handleMarkPresent = (studentId: string) => {

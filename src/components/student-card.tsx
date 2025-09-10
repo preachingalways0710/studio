@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { Student } from '@/lib/types';
+import type { Student } from '@/lib/types';
 import { getAge, cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -105,7 +105,6 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
 
     const updatedStudent = { ...student, [field]: updatedValue };
     onUpdateStudent(updatedStudent);
-    updateStudentInFirestore({ [field]: updatedValue });
     toast({ title: 'Student Updated', description: `${student.name}'s ${field} has been updated.` });
   };
   
@@ -128,7 +127,6 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     const updatedPoints = Math.max(0, student.points + points);
     const updatedStudent = { ...student, points: updatedPoints };
     onUpdateStudent(updatedStudent);
-    updateStudentInFirestore({ points: updatedPoints });
 
     toast({
       title: 'Points Updated!',
@@ -146,7 +144,6 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     const restoredPoints = originalPoints - points;
     const updatedStudent = { ...student, points: restoredPoints };
     onUpdateStudent(updatedStudent);
-    updateStudentInFirestore({ points: restoredPoints });
 
     toast({
       title: 'Points Restored!',
