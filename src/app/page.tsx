@@ -17,7 +17,11 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -40,18 +44,22 @@ export default function Home() {
         if (helperDocSnap.exists()) {
           setHelperAttendance(helperDocSnap.data() as HelperAttendance);
         } else {
+          // If no document exists for the current month, initialize it
           setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
         }
 
       } catch (error) {
         console.error("Error fetching data:", error);
+        // It's possible to get here if firestore rules are not set up correctly
+        // or if there's a network issue that persistence can't handle.
+        // For now, we'll just log it and show an empty dashboard.
       } finally {
         setInitialLoading(false);
       }
     };
 
     fetchData();
-  }, [user]);
+  }, [user, authLoading, router]);
 
   if (authLoading || initialLoading) {
     return (
@@ -62,8 +70,7 @@ export default function Home() {
   }
 
   if (!user) {
-    // AuthProvider handles redirect, but this prevents flash of content
-    router.push('/login');
+    // This is a fallback, but the useEffect should have already redirected.
     return null;
   }
   
