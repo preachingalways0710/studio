@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import type { Student } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
@@ -24,6 +24,21 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
   
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImport(file);
+    }
+     if (event.target) {
+      event.target.value = '';
+    }
+  };
 
   const handleImport = async (file: File) => {
     if (!user) {
@@ -70,9 +85,8 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
           const batch = writeBatch(db);
           const newStudentsWithIds: Student[] = [];
 
-          for (const [index, studentData] of importedStudents.entries()) {
+          for (const studentData of importedStudents) {
               const docRef = doc(collection(db, 'students'));
-              // Assign a rotating avatarId
               const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
               const avatarId = avatarIdOptions[(students.length + newStudentsWithIds.length) % avatarIdOptions.length];
               const studentWithAvatar = {
@@ -124,7 +138,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         s.id === updatedStudent.id ? updatedStudent : s
       )
     );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...studentData } = updatedStudent;
     updateStudentInFirestore(updatedStudent.id, studentData);
   };
@@ -201,12 +214,19 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
   
   return (
     <div className="flex min-h-screen w-full flex-col">
+       <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".csv"
+        />
       <DashboardHeader 
         searchTerm={searchTerm} 
         onSearchChange={setSearchTerm}
         students={students}
         presentCount={presentCount}
-        onImport={handleImport}
+        onImportClick={handleImportClick}
         user={user}
       />
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
@@ -218,7 +238,6 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
               <br />
               You can add students by importing a CSV file.
             </p>
-            {/* This button is now effectively controlled from the header */}
             <p className="text-xs text-muted-foreground mt-4">Use the upload button in the header to import a CSV with 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
