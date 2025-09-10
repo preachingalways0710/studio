@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "student-liam",
+      "description": "Avatar for Liam Smith",
+      "imageUrl": "https://picsum.photos/seed/liam/200/200",
+      "imageHint": "child smiling"
+    },
+    {
+      "id": "student-olivia",
+      "description": "Avatar for Olivia Brown",
+      "imageUrl": "https://picsum.photos/seed/olivia/200/200",
+      "imageHint": "child playing"
+    },
+    {
+      "id": "student-noah",
+      "description": "Avatar for Noah Jones",
+      "imageUrl": "https://picsum.photos/seed/noah/200/200",
+      "imageHint": "child reading"
+    },
+    {
+      "id": "student-emma",
+      "description": "Avatar for Emma Garcia",
+      "imageUrl": "https://picsum.photos/seed/emma/200/200",
+      "imageHint": "child laughing"
+    },
+    {
+      "id": "student-oliver",
+      "description": "Avatar for Oliver Miller",
+      "imageUrl": "https://picsum.photos/seed/oliver/200/200",
+      "imageHint": "child drawing"
+    },
+    {
+      "id": "student-ava",
+      "description": "Avatar for Ava Davis",
+      "imageUrl": "https://picsum.photos/seed/ava/200/200",
+      "imageHint": "child outdoors"
+    }
+  ]
 }
