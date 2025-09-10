@@ -126,7 +126,7 @@ export function Dashboard({ students, helperAttendance }: DashboardProps) {
   };
 
 
-  const updateStudentInFirestore = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>) => {
+  const handleUpdateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>) => {
     const studentRef = doc(db, 'students', studentId);
     try {
       await updateDoc(studentRef, updatedData);
@@ -160,11 +160,6 @@ export function Dashboard({ students, helperAttendance }: DashboardProps) {
     }
   };
 
-  const updateStudent = (updatedStudent: Student) => {
-    const { id, ...studentData } = updatedStudent;
-    updateStudentInFirestore(updatedStudent.id, studentData);
-  };
-  
   const handleMarkPresent = (studentId: string) => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const currentYear = new Date().getFullYear();
@@ -184,13 +179,12 @@ export function Dashboard({ students, helperAttendance }: DashboardProps) {
       return;
     }
     
-    const updatedStudent = {
-      ...student,
+    const updatedStudentData = {
       points: student.points + 10,
       attendance: [...student.attendance, { month: currentMonth, year: currentYear }],
     };
 
-    updateStudent(updatedStudent);
+    handleUpdateStudent(studentId, updatedStudentData);
     toast({
         title: 'Attendance Marked!',
         description: `${student.name} received 10 points for being present.`,
@@ -209,15 +203,14 @@ export function Dashboard({ students, helperAttendance }: DashboardProps) {
 
     if (!attendanceRecord) return;
 
-    const updatedStudent = {
-      ...student,
+    const updatedStudentData = {
       points: student.points >= 10 ? student.points - 10 : 0,
       attendance: student.attendance.filter(
         att => !(att.month === currentMonth && att.year === currentYear)
       ),
     };
     
-    updateStudent(updatedStudent);
+    handleUpdateStudent(studentId, updatedStudentData);
 
     toast({
       title: 'Attendance Undone',
@@ -264,7 +257,7 @@ export function Dashboard({ students, helperAttendance }: DashboardProps) {
               <StudentCard
                 key={student.id}
                 student={student}
-                onUpdateStudent={updateStudent}
+                onUpdateStudent={(updatedData) => handleUpdateStudent(student.id, updatedData)}
                 onMarkPresent={() => handleMarkPresent(student.id)}
                 onUndoPresent={() => handleUndoPresent(student.id)}
               />

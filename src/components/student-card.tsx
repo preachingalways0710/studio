@@ -14,8 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 interface EditableFieldProps {
   value: string | number;
@@ -66,7 +64,7 @@ function EditableField({ value, onSave, inputType = 'text', className, textClass
 
 interface StudentCardProps {
   student: Student;
-  onUpdateStudent: (student: Student) => void;
+  onUpdateStudent: (updatedData: Partial<Omit<Student, 'id'>>) => void;
   onMarkPresent: () => void;
   onUndoPresent: () => void;
 }
@@ -85,26 +83,17 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     return student.attendance.some(att => att.month === currentMonth && att.year === currentYear);
   }, [student.attendance, currentMonth, currentYear]);
 
-  const updateStudentInFirestore = async (updatedData: Partial<Student>) => {
-    const studentRef = doc(db, 'students', student.id);
-    try {
-      await updateDoc(studentRef, updatedData);
-    } catch (error) {
-      console.error("Error updating student:", error);
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes to the database.' });
-    }
-  };
-  
-  const handleFieldSave = (field: keyof Student, value: string) => {
-    const updatedValue = field === 'points' ? parseInt(value, 10) : value;
-    
-    if (field === 'points' && isNaN(updatedValue as number)) {
+  const handleFieldSave = (field: keyof Omit<Student, 'id' | 'attendance'>, value: string) => {
+    let updatedValue: string | number = value;
+    if (field === 'points') {
+      updatedValue = parseInt(value, 10);
+      if (isNaN(updatedValue)) {
         toast({ variant: 'destructive', title: 'Invalid points value' });
         return;
+      }
     }
-
-    const updatedStudent = { ...student, [field]: updatedValue };
-    onUpdateStudent(updatedStudent);
+    
+    onUpdateStudent({ [field]: updatedValue });
     toast({ title: 'Student Updated', description: `${student.name}'s ${field} has been updated.` });
   };
   
@@ -117,7 +106,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
       reader.onload = (event) => {
         const newAvatarUrl = event.target?.result as string;
         setAvatarUrl(newAvatarUrl);
-        toast({ title: "Avatar Updated", description: "The new avatar is shown as a preview and is not saved."});
+        toast({ title: "Avatar Updated", description: "The new avatar is shown as a preview and is not saved to the database."});
       };
       reader.readAsDataURL(file);
     }
@@ -125,8 +114,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
 
   const applyPoints = (points: number, description: string, undoDescription: string) => {
     const updatedPoints = Math.max(0, student.points + points);
-    const updatedStudent = { ...student, points: updatedPoints };
-    onUpdateStudent(updatedStudent);
+    onUpdateStudent({ points: updatedPoints });
 
     toast({
       title: 'Points Updated!',
@@ -140,10 +128,8 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
   };
 
   const undoPoints = (points: number, description: string) => {
-    const originalPoints = student.points; // This is the new value, so we reverse it
-    const restoredPoints = originalPoints - points;
-    const updatedStudent = { ...student, points: restoredPoints };
-    onUpdateStudent(updatedStudent);
+    const restoredPoints = student.points - points;
+    onUpdateStudent({ points: restoredPoints });
 
     toast({
       title: 'Points Restored!',
@@ -190,6 +176,9 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
                         }
                     }}
                     initialFocus
+                    captionLayout="dropdown-buttons"
+                    fromYear={new Date().getFullYear() - 20}
+                    toYear={new Date().getFullYear()}
                 />
             </PopoverContent>
         </Popover>
