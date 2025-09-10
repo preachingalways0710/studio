@@ -5,21 +5,25 @@ import { initialStudents } from '@/lib/students';
 import { useState } from 'react';
 import type { Student } from '@/lib/types';
 import React from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [loading, setLoading] = useState(false);
-
-  // The generateStudentsAction call has been removed.
-  // The app will now start with an empty list of students from initialStudents.
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p>Loading student data...</p>
+        <p>Loading...</p>
       </div>
     );
   }
 
+  if (!user) {
+    return null; // The AuthProvider will handle the redirect.
+  }
+  
   return <Dashboard initialStudents={students} setStudents={setStudents} />;
 }
