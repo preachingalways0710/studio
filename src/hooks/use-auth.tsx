@@ -31,22 +31,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
           });
-          // The middleware will handle redirects.
-          // For a smoother user experience, if the user is on the login/signup page,
-          // we can perform a refresh to trigger the middleware.
+          // After successful session creation, the middleware will handle redirection.
           if (pathname === '/login' || pathname === '/signup') {
-            router.refresh();
+            // A hard refresh is more reliable to trigger middleware after cookie is set.
+            window.location.href = '/';
           }
         } catch (error) {
             console.error("Error setting session cookie:", error);
-            // If session creation fails, log the user out on the client and server
             await auth.signOut();
             await fetch('/api/auth/logout', { method: 'POST' });
         }
       } else {
-        // User logged out or no user
         await fetch('/api/auth/logout', { method: 'POST' });
-        // Let the middleware handle redirecting to login if needed.
         if (pathname !== '/login' && pathname !== '/signup') {
             router.push('/login');
         }
