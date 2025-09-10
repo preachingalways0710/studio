@@ -74,7 +74,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const age = getAge(student.birthday);
+  const age = student.birthday ? getAge(student.birthday) : null;
   const avatar = PlaceHolderImages.find(img => img.id === student.avatarId);
   const [avatarUrl, setAvatarUrl] = useState(avatar?.imageUrl);
 
@@ -167,7 +167,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
             <PopoverContent className="w-auto p-0">
                 <Calendar
                     mode="single"
-                    selected={new Date(student.birthday)}
+                    selected={student.birthday ? new Date(student.birthday) : undefined}
                     onSelect={(date) => {
                         if (date) {
                             handleFieldSave('birthday', format(date, 'yyyy-MM-dd'))
@@ -192,7 +192,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
           <CardTitle className="font-headline text-2xl">
              <EditableField value={student.name} onSave={(v) => handleFieldSave('name', v)} textClassName="justify-center"/>
           </CardTitle>
-          <p className="text-sm text-muted-foreground">{age} anos</p>
+          {age !== null && <p className="text-sm text-muted-foreground">{age} anos</p>}
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-center px-4 pb-4">

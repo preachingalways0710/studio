@@ -40,11 +40,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
           const pointsIndex = header.indexOf('points');
           const birthdayIndex = header.indexOf('birthday');
 
-          if (nameIndex === -1 || pointsIndex === -1 || birthdayIndex === -1) {
+          if (nameIndex === -1 || pointsIndex === -1) {
             toast({
               variant: 'destructive',
               title: 'Invalid CSV Header',
-              description: 'CSV must include "name", "points", and "birthday" columns.',
+              description: 'CSV must include "name" and "points" columns.',
             });
             return;
           }
@@ -53,10 +53,10 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
             const values = line.split(',');
             return {
               id: `imported-${Date.now()}-${index}`,
-              name: values[nameIndex].trim(),
-              points: parseInt(values[pointsIndex].trim(), 10) || 0,
-              birthday: values[birthdayIndex].trim(),
-              avatarId: `student-${(index % 6) + 1}`, // Cycle through placeholder avatars
+              name: values[nameIndex]?.trim() || 'No Name',
+              points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
+              birthday: birthdayIndex !== -1 ? values[birthdayIndex]?.trim() : '2018-01-01', // Default birthday if not provided
+              avatarId: `student-${(index % 6) + 1}`,
               attendance: [],
             };
           });
@@ -188,7 +188,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
               <Upload className="mr-2 h-4 w-4"/>
               Import Students from CSV
             </Button>
-             <p className="text-xs text-muted-foreground mt-4">Your CSV should have 'name', 'points', and 'birthday' (YYYY-MM-DD) columns.</p>
+             <p className="text-xs text-muted-foreground mt-4">Your CSV should have at least 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
