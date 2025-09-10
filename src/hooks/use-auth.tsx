@@ -20,42 +20,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (newUser) => {
-      setLoading(true); // Start loading when auth state changes
+      setLoading(true);
       setUser(newUser);
       
       if (newUser) {
         try {
           const idToken = await newUser.getIdToken();
-          // Set session cookie
           await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
           });
-
-          // After session is set, if on a public page, redirect to home
+          // THE FIX: Remove client-side redirect. The middleware will handle this.
+          // After the session is set, a refresh or navigation will trigger the
+          // middleware, which will redirect from /login if authenticated.
+          // For a smoother UX, we can force a reload to trigger middleware.
           if (pathname === '/login' || pathname === '/signup') {
-            router.push('/');
+            router.refresh(); 
           }
-
         } catch (error) {
             console.error("Error setting session cookie:", error);
-            // Handle error case, maybe sign out user
-             await fetch('/api/auth/logout', { method: 'POST' });
+            await fetch('/api/auth/logout', { method: 'POST' });
         }
       } else {
-        // User is logged out, clear session cookie
         await fetch('/api/auth/logout', { method: 'POST' });
-        // If on a protected page, redirect to login
         if (pathname !== '/login' && pathname !== '/signup') {
             router.push('/login');
         }
       }
-      setLoading(false); // Stop loading after all logic is done
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  // We add router and pathname to dependencies to ensure redirects are handled correctly on change
   }, [router, pathname]);
 
 
