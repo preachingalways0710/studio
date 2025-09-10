@@ -195,38 +195,33 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
           <p className="text-sm text-muted-foreground">{age} years old</p>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow text-center px-4 pb-4">
+      <CardContent className="flex-grow flex flex-col justify-center px-4 pb-4">
          <div className="flex items-center justify-center gap-2 font-bold text-3xl mb-4">
             <Star className="h-7 w-7 text-yellow-400 fill-yellow-400" />
             <EditableField value={student.points} onSave={(v) => handleFieldSave('points', v)} inputType="number" />
           </div>
-
-        {isPresentThisMonth ? (
-          <Button onClick={onUndoPresent} variant="outline" className="w-full">
-            <Undo2 className="mr-2 h-4 w-4" />
-            Undo Present
-          </Button>
-        ) : (
-          <Button onClick={onMarkPresent} className="w-full">
-            <CalendarCheck className="mr-2 h-4 w-4" />
-            Present (+10 pts)
-          </Button>
-        )}
+        
+        <div className="grid grid-cols-2 gap-2 items-center">
+            {isPresentThisMonth ? (
+                <Button onClick={onUndoPresent} variant="outline" className="w-full">
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Undo
+                </Button>
+            ) : (
+                <Button onClick={onMarkPresent} className="w-full">
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Present
+                </Button>
+            )}
+            <ActionItem
+                icon={Users}
+                label="Friends"
+                pointsLabel="+30 ea."
+                onAction={handleFriendPoints}
+            />
+        </div>
       </CardContent>
-       <CardFooter className="grid grid-cols-3 gap-2 p-2 pt-0 border-t bg-muted/50">
-         <ActionItem
-            icon={Users}
-            label="Friends"
-            pointsLabel="+30 ea."
-            onAction={handleFriendPoints}
-         />
-         <ActionItem
-            icon={GripHorizontal}
-            label=" "
-            pointsLabel=" "
-            onAction={() => {}}
-            isSeparator
-         />
+       <CardFooter className="flex flex-col gap-2 p-2 pt-0 border-t bg-muted/50">
          <ActionItem
             icon={ShoppingCart}
             label="Purchase"
@@ -266,19 +261,19 @@ function ActionItem({ icon: Icon, label, pointsLabel, onAction, variant = 'defau
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col items-center justify-between space-y-1 py-2 px-1 rounded-lg">
+        <form onSubmit={handleSubmit} className="flex flex-col items-center justify-between space-y-1 py-2 px-1 rounded-lg w-full">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Icon className="h-3 w-3" />
                 <span>{label}</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 w-full">
                 <Input
                     type="number"
                     min="1"
                     placeholder="0"
                     value={value}
                     onChange={e => setValue(e.target.value)}
-                    className="h-7 w-12 text-center p-1"
+                    className="h-7 w-full text-center p-1"
                 />
                 <Button type="submit" size="sm" variant={variant} className="h-7 text-xs px-2">
                     {pointsLabel}
