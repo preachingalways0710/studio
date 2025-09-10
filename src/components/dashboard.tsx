@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import type { Student } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
-import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
+
 
 interface DashboardProps {
     initialStudents: Student[];
@@ -23,9 +25,14 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  const handleImport = (file: File) => {
+  const handleImport = async (file: File) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to import students.' });
+        return;
+    }
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result;
       if (typeof text === 'string') {
         try {
@@ -49,10 +56,10 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
             return;
           }
 
-          const importedStudents: Student[] = lines.slice(1).map((line, index) => {
+          const importedStudents: Omit<Student, 'id'>[] = lines.slice(1).map((line, index) => {
             const values = line.split(',');
             return {
-              id: `imported-${Date.now()}-${index}`,
+              userId: user.uid,
               name: values[nameIndex]?.trim() || 'No Name',
               points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
               birthday: birthdayIndex !== -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
@@ -61,11 +68,23 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
             };
           });
 
-          setStudents(prev => [...prev, ...importedStudents]);
+          const batch = writeBatch(db);
+          const newStudentsWithIds: Student[] = [];
+
+          for (const studentData of importedStudents) {
+              const docRef = doc(collection(db, 'students'));
+              batch.set(docRef, studentData);
+              newStudentsWithIds.push({ ...studentData, id: docRef.id });
+          }
+          
+          await batch.commit();
+
+          setStudents(prev => [...prev, ...newStudentsWithIds]);
           toast({
             title: 'Import Successful',
-            description: `${importedStudents.length} students have been added.`,
+            description: `${importedStudents.length} students have been saved to Firestore.`,
           });
+
         } catch (error) {
           toast({
             variant: 'destructive',
@@ -107,17 +126,13 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
       return;
     }
     
-    setStudents(prevStudents =>
-        prevStudents.map(s =>
-            s.id === studentId
-            ? {
-                ...s,
-                points: s.points + 10,
-                attendance: [...s.attendance, { month: currentMonth, year: currentYear }],
-                }
-            : s
-        )
-    );
+    const updatedStudent = {
+      ...student,
+      points: student.points + 10,
+      attendance: [...student.attendance, { month: currentMonth, year: currentYear }],
+    };
+
+    updateStudent(updatedStudent);
     toast({
         title: 'Attendance Marked!',
         description: `${student.name} received 10 points for being present.`,
@@ -136,19 +151,15 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
 
     if (!attendanceRecord) return;
 
-    setStudents(prevStudents =>
-      prevStudents.map(s =>
-        s.id === studentId
-          ? {
-              ...s,
-              points: s.points >= 10 ? s.points - 10 : 0,
-              attendance: s.attendance.filter(
-                att => !(att.month === currentMonth && att.year === currentYear)
-              ),
-            }
-          : s
-      )
-    );
+    const updatedStudent = {
+      ...student,
+      points: student.points >= 10 ? student.points - 10 : 0,
+      attendance: student.attendance.filter(
+        att => !(att.month === currentMonth && att.year === currentYear)
+      ),
+    };
+    
+    updateStudent(updatedStudent);
 
     toast({
       title: 'Attendance Undone',
@@ -172,6 +183,8 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
     const file = event.target.files?.[0];
     if (file) {
       handleImport(file);
+      // Reset file input to allow re-uploading the same file
+      event.target.value = '';
     }
   };
 

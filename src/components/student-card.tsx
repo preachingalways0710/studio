@@ -9,12 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Edit2, Star, Users, ShoppingCart, Undo2, CalendarCheck, GripHorizontal, PartyPopper } from 'lucide-react';
+import { Edit2, Star, Users, ShoppingCart, Undo2, CalendarCheck, PartyPopper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface EditableFieldProps {
   value: string | number;
@@ -84,6 +85,16 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
     return student.attendance.some(att => att.month === currentMonth && att.year === currentYear);
   }, [student.attendance, currentMonth, currentYear]);
 
+  const updateStudentInFirestore = async (updatedData: Partial<Student>) => {
+    const studentRef = doc(db, 'students', student.id);
+    try {
+      await updateDoc(studentRef, updatedData);
+    } catch (error) {
+      console.error("Error updating student:", error);
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes to the database.' });
+    }
+  };
+  
   const handleFieldSave = (field: keyof Student, value: string) => {
     const updatedValue = field === 'points' ? parseInt(value, 10) : value;
     
@@ -94,6 +105,7 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
 
     const updatedStudent = { ...student, [field]: updatedValue };
     onUpdateStudent(updatedStudent);
+    updateStudentInFirestore({ [field]: updatedValue });
     toast({ title: 'Student Updated', description: `${student.name}'s ${field} has been updated.` });
   };
   
@@ -113,8 +125,11 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
   };
 
   const applyPoints = (points: number, description: string, undoDescription: string) => {
-    const updatedStudent = { ...student, points: Math.max(0, student.points + points) };
+    const updatedPoints = Math.max(0, student.points + points);
+    const updatedStudent = { ...student, points: updatedPoints };
     onUpdateStudent(updatedStudent);
+    updateStudentInFirestore({ points: updatedPoints });
+
     toast({
       title: 'Points Updated!',
       description,
@@ -127,8 +142,12 @@ export function StudentCard({ student, onUpdateStudent, onMarkPresent, onUndoPre
   };
 
   const undoPoints = (points: number, description: string) => {
-    const updatedStudent = { ...student, points: Math.max(0, student.points - points) };
+    const originalPoints = student.points; // This is the new value, so we reverse it
+    const restoredPoints = originalPoints - points;
+    const updatedStudent = { ...student, points: restoredPoints };
     onUpdateStudent(updatedStudent);
+    updateStudentInFirestore({ points: restoredPoints });
+
     toast({
       title: 'Points Restored!',
       description,
