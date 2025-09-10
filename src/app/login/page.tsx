@@ -8,29 +8,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // The useAuth hook will handle the redirect after successful login
-      // and session cookie creation. No need to push router here.
+      // The useAuth hook and middleware will handle the redirect after 
+      // successful login and session cookie creation.
       await signInWithEmailAndPassword(auth, email, password);
+      // We don't need to push the router here, the auth hook and middleware take care of it.
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: error.message,
       });
-    } finally {
       setLoading(false);
-    }
+    } 
+    // Do not set loading to false in a `finally` block
+    // because the component will unmount on successful login and redirect.
   };
 
   return (
