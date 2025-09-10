@@ -12,18 +12,14 @@ export function Dashboard({ initialStudents }: { initialStudents: Student[] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  const updateStudentPoints = (studentId: string, pointsToAdd: number, message: string) => {
+  const updateStudent = (updatedStudent: Student) => {
     setStudents(prevStudents =>
       prevStudents.map(s =>
-        s.id === studentId ? { ...s, points: s.points + pointsToAdd } : s
+        s.id === updatedStudent.id ? updatedStudent : s
       )
     );
-    toast({
-      title: 'Points Updated!',
-      description: message,
-    });
   };
-
+  
   const handleMarkPresent = (studentId: string) => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const currentYear = new Date().getFullYear();
@@ -60,28 +56,36 @@ export function Dashboard({ initialStudents }: { initialStudents: Student[] }) {
     });
   };
 
-  const handleAddFriendPoints = (studentId: string, friendCount: number) => {
-    if (friendCount <= 0) return;
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-    const points = friendCount * 30;
-    updateStudentPoints(studentId, points, `${student.name} received ${points} points for inviting ${friendCount} friend(s).`);
-  };
-
-  const handlePurchase = (studentId: string, cost: number) => {
-    if (cost <= 0) return;
+  const handleUndoPresent = (studentId: string) => {
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    const currentYear = new Date().getFullYear();
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
-    if (student.points < cost) {
-      toast({
-        variant: 'destructive',
-        title: 'Insufficient Points',
-        description: `${student.name} does not have enough points for this purchase.`,
-      });
-      return;
-    }
-    updateStudentPoints(studentId, -cost, `${student.name} spent ${cost} points.`);
+    const attendanceRecord = student.attendance.find(
+      att => att.month === currentMonth && att.year === currentYear
+    );
+
+    if (!attendanceRecord) return;
+
+    setStudents(prevStudents =>
+      prevStudents.map(s =>
+        s.id === studentId
+          ? {
+              ...s,
+              points: s.points - 10,
+              attendance: student.attendance.filter(
+                att => att.month !== currentMonth || att.year !== currentYear
+              ),
+            }
+          : s
+      )
+    );
+
+    toast({
+      title: 'Attendance Undone',
+      description: `Removed attendance and points for ${student.name} for ${currentMonth}.`,
+    });
   };
 
   const filteredStudents = students.filter(student =>
@@ -98,9 +102,9 @@ export function Dashboard({ initialStudents }: { initialStudents: Student[] }) {
               <StudentCard
                 key={student.id}
                 student={student}
+                onUpdateStudent={updateStudent}
                 onMarkPresent={() => handleMarkPresent(student.id)}
-                onAddFriendPoints={handleAddFriendPoints}
-                onPurchase={handlePurchase}
+                onUndoPresent={() => handleUndoPresent(student.id)}
               />
             ))}
           </div>
