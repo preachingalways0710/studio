@@ -37,6 +37,7 @@ export function DashboardPage() {
       if (doc.exists()) {
         setHelperAttendance(doc.data() as HelperAttendance);
       } else {
+        // Initialize if it doesn't exist, which will also be picked up by the listener
         setHelperAttendance({ userId, month: currentMonth, year: currentYear, count: 0 });
       }
     }, (error) => {
@@ -77,10 +78,8 @@ export function DashboardPage() {
 
   return (
     <Dashboard 
-      initialStudents={students} 
-      setStudents={setStudents} 
-      initialHelperAttendance={helperAttendance} 
-      setHelperAttendance={setHelperAttendance} 
+      students={students} 
+      helperAttendance={helperAttendance} 
     />
   );
 }

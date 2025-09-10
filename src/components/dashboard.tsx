@@ -1,34 +1,26 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Student, HelperAttendance } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { doc, writeBatch, collection, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, writeBatch, collection, updateDoc, addDoc, setDoc } from 'firebase/firestore';
 
 
 interface DashboardProps {
-    initialStudents: Student[];
-    setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
-    initialHelperAttendance: HelperAttendance | null;
-    setHelperAttendance: React.Dispatch<React.SetStateAction<HelperAttendance | null>>;
+    students: Student[];
+    helperAttendance: HelperAttendance | null;
 }
 
 const ANONYMOUS_USER_ID = 'shared-user-id';
 
-export function Dashboard({ initialStudents, setStudents: setStudentsProp, initialHelperAttendance, setHelperAttendance: setHelperAttendanceProp }: DashboardProps) {
-  const students = initialStudents;
-  const setStudents = setStudentsProp;
+export function Dashboard({ students, helperAttendance }: DashboardProps) {
   const userId = ANONYMOUS_USER_ID;
   
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-
-  const helperAttendance = initialHelperAttendance;
-  const setHelperAttendance = setHelperAttendanceProp;
-
 
   const handleImport = async (file: File) => {
     const reader = new FileReader();
@@ -47,11 +39,11 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
           const pointsIndex = header.indexOf('points');
           const birthdayIndex = header.indexOf('birthday');
 
-          if (nameIndex === -1 || pointsIndex === -1) {
+          if (nameIndex === -1) {
             toast({
               variant: 'destructive',
               title: 'Invalid CSV Header',
-              description: 'CSV must include "name" and "points" columns.',
+              description: 'CSV must include a "name" column.',
             });
             return;
           }
@@ -61,18 +53,24 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
             return {
               userId: userId,
               name: values[nameIndex]?.trim() || 'No Name',
-              points: parseInt(values[pointsIndex]?.trim(), 10) || 0,
-              birthday: birthdayIndex !== -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
+              points: pointsIndex > -1 ? (parseInt(values[pointsIndex]?.trim(), 10) || 0) : 0,
+              birthday: birthdayIndex > -1 && values[birthdayIndex]?.trim() ? values[birthdayIndex]!.trim() : '',
               attendance: [],
             };
-          });
+          }).filter(s => s.name !== 'No Name' && s.name.trim() !== '');
+
+          if (importedStudents.length === 0) {
+            toast({ title: 'Import Finished', description: 'No valid student data found to import.'});
+            return;
+          }
 
           const batch = writeBatch(db);
           const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
-
+          
+          const currentStudentCount = students.length;
           importedStudents.forEach((studentData, index) => {
             const docRef = doc(collection(db, 'students'));
-            const avatarId = avatarIdOptions[(students.length + index) % avatarIdOptions.length];
+            const avatarId = avatarIdOptions[(currentStudentCount + index) % avatarIdOptions.length];
             const studentWithAvatar = {
               ...studentData,
               avatarId: avatarId!,
@@ -84,7 +82,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
 
           toast({
             title: 'Import Successful',
-            description: `${importedStudents.length} students have been saved and added to the dashboard.`,
+            description: `${importedStudents.length} students have been saved. The dashboard will update momentarily.`,
           });
 
         } catch (error) {
@@ -115,7 +113,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
         await addDoc(collection(db, 'students'), studentToAdd);
         toast({
             title: 'Student Added',
-            description: `${newStudentData.name} has been added to the dashboard.`,
+            description: `${newStudentData.name} has been added.`,
         });
     } catch (error) {
         toast({
@@ -155,8 +153,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
     };
 
     try {
-      await setDoc(doc(db, 'helpers', docId), newHelperData);
-      // State will be updated by the listener
+      await setDoc(doc(db, 'helpers', docId), newHelperData, { merge: true });
     } catch (error) {
        console.error("Error updating helpers:", error);
        toast({ variant: "destructive", title: "Update Failed", description: "Could not save helper count." });
@@ -234,9 +231,9 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
     return students.filter(s => s.attendance.some(att => att.month === currentMonth && att.year === currentYear)).length;
   }, [students]);
 
-  const filteredStudents = students
+  const filteredStudents = useMemo(() => students
     .filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name)), [students, searchTerm]);
   
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -259,7 +256,7 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp, initi
               <br />
               You can add students individually or by importing a CSV file.
             </p>
-            <p className="text-xs text-muted-foreground mt-4">Use the buttons in the header to get started. CSVs need 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
+            <p className="text-xs text-muted-foreground mt-4">Use the buttons in the header to get started. CSVs need a 'name' column. 'points' and 'birthday' (YYYY-MM-DD) are optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
