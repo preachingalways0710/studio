@@ -4,58 +4,52 @@ import { Dashboard } from '@/components/dashboard';
 import { useState, useEffect } from 'react';
 import type { Student, HelperAttendance } from '@/lib/types';
 import React from 'react';
-import { collection, getDocs, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-interface DashboardPageProps {
-  initialStudents: Student[];
-  initialHelperAttendance: HelperAttendance | null;
-}
 
 const ANONYMOUS_USER_ID = 'shared-user-id';
 
-export function DashboardPage({ initialStudents, initialHelperAttendance }: DashboardPageProps) {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(initialHelperAttendance);
-  const [dataLoading, setDataLoading] = useState(true);
+export function DashboardPage() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userId = ANONYMOUS_USER_ID;
 
-    // Set up listeners for real-time updates
+    // Listener for students
     const studentQuery = query(collection(db, 'students'), where('userId', '==', userId));
     const studentsUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
-        const updatedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
-        setStudents(updatedStudents);
-        setDataLoading(false);
+      const updatedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Student);
+      setStudents(updatedStudents);
+      setLoading(false);
     }, (error) => {
       console.error("Error fetching students:", error);
-      setDataLoading(false);
+      setLoading(false);
     });
-    
+
+    // Listener for helpers
     const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const currentYear = new Date().getFullYear();
     const helperDocId = `${userId}_${currentMonth}_${currentYear}`;
     const helperDocRef = doc(db, 'helpers', helperDocId);
     const helperUnsubscribe = onSnapshot(helperDocRef, (doc) => {
-        if (doc.exists()) {
-            setHelperAttendance(doc.data() as HelperAttendance);
-        } else {
-             setHelperAttendance({ userId: userId, month: currentMonth, year: currentYear, count: 0 });
-        }
+      if (doc.exists()) {
+        setHelperAttendance(doc.data() as HelperAttendance);
+      } else {
+        setHelperAttendance({ userId, month: currentMonth, year: currentYear, count: 0 });
+      }
     }, (error) => {
       console.error("Error fetching helpers:", error);
     });
 
-
     return () => {
-        studentsUnsubscribe();
-        helperUnsubscribe();
+      studentsUnsubscribe();
+      helperUnsubscribe();
     };
-
   }, []);
 
-  if (dataLoading) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -80,6 +74,13 @@ export function DashboardPage({ initialStudents, initialHelperAttendance }: Dash
       </div>
     );
   }
-  
-  return <Dashboard initialStudents={students} setStudents={setStudents} initialHelperAttendance={helperAttendance} setHelperAttendance={setHelperAttendance} />;
+
+  return (
+    <Dashboard 
+      initialStudents={students} 
+      setStudents={setStudents} 
+      initialHelperAttendance={helperAttendance} 
+      setHelperAttendance={setHelperAttendance} 
+    />
+  );
 }
