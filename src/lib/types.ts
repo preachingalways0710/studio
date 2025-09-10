@@ -10,3 +10,10 @@ export interface Student {
     year: number;
   }[];
 }
+
+export interface HelperAttendance {
+  userId: string;
+  month: string;
+  year: number;
+  count: number;
+}

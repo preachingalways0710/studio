@@ -2,15 +2,16 @@
 
 import { Dashboard } from '@/components/dashboard';
 import { useState, useEffect } from 'react';
-import type { Student } from '@/lib/types';
+import type { Student, HelperAttendance } from '@/lib/types';
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function Home() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -18,23 +19,38 @@ export default function Home() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       try {
-        const q = query(collection(db, 'students'), where('userId', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        const studentData = querySnapshot.docs.map(doc => ({
+        // Fetch Students
+        const studentQuery = query(collection(db, 'students'), where('userId', '==', user.uid));
+        const studentSnapshot = await getDocs(studentQuery);
+        const studentData = studentSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         })) as Student[];
         setStudents(studentData);
+        
+        // Fetch Helper Attendance for current month
+        const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+        const currentYear = new Date().getFullYear();
+        const helperDocId = `${user.uid}_${currentMonth}_${currentYear}`;
+        const helperDocRef = doc(db, 'helpers', helperDocId);
+        const helperDocSnap = await getDoc(helperDocRef);
+
+        if (helperDocSnap.exists()) {
+          setHelperAttendance(helperDocSnap.data() as HelperAttendance);
+        } else {
+          setHelperAttendance({ userId: user.uid, month: currentMonth, year: currentYear, count: 0 });
+        }
+
       } catch (error) {
-        console.error("Error fetching students:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setInitialLoading(false);
       }
     };
 
-    fetchStudents();
+    fetchData();
   }, [user]);
 
   if (authLoading || initialLoading) {
@@ -46,8 +62,10 @@ export default function Home() {
   }
 
   if (!user) {
-    return null; // AuthProvider handles redirect
+    // AuthProvider handles redirect, but this prevents flash of content
+    router.push('/login');
+    return null;
   }
   
-  return <Dashboard initialStudents={students} setStudents={setStudents} />;
+  return <Dashboard initialStudents={students} setStudents={setStudents} initialHelperAttendance={helperAttendance} />;
 }

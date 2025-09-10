@@ -1,15 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Student } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Student, HelperAttendance } from '@/lib/types';
 import { LineChart } from 'lucide-react';
 import { SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-
 interface MonthlyOverviewProps {
   students: Student[];
+  helperAttendance: HelperAttendance | null;
 }
 
 const ALL_MONTHS = [
@@ -17,21 +16,27 @@ const ALL_MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export function MonthlyOverview({ students }: MonthlyOverviewProps) {
+export function MonthlyOverview({ students, helperAttendance }: MonthlyOverviewProps) {
   const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
 
   const chartData = useMemo(() => {
     return ALL_MONTHS.map(month => {
       const presentCount = students.filter(student =>
         student.attendance.some(att => att.month === month && att.year === currentYear)
       ).length;
+      
+      // We only have helper data for the current month in this implementation
+      const helpers = (month === currentMonth && helperAttendance) ? helperAttendance.count : 0;
+
       return {
         name: month.substring(0, 3),
         present: presentCount,
         absent: students.length - presentCount,
+        helpers: helpers,
       };
     });
-  }, [students, currentYear]);
+  }, [students, currentYear, helperAttendance, currentMonth]);
 
   return (
     <>
@@ -41,11 +46,11 @@ export function MonthlyOverview({ students }: MonthlyOverviewProps) {
           Monthly Attendance Overview
         </SheetTitle>
         <SheetDescription>
-          A chart showing student attendance trends for {currentYear}.
+          A chart showing student and helper attendance trends for {currentYear}.
         </SheetDescription>
       </SheetHeader>
       <div className="py-4 h-[400px]">
-        {students.length > 0 ? (
+        {students.length > 0 || (helperAttendance && helperAttendance.count > 0) ? (
             <ResponsiveContainer width="100%" height="100%">
             <BarChart
                 data={chartData}
@@ -67,13 +72,14 @@ export function MonthlyOverview({ students }: MonthlyOverviewProps) {
                     }}
                  />
                 <Legend />
-                <Bar dataKey="present" fill="hsl(var(--primary))" name="Present" />
-                <Bar dataKey="absent" fill="hsl(var(--muted))" name="Absent" />
+                <Bar dataKey="present" fill="hsl(var(--primary))" name="Present" stackId="a" />
+                <Bar dataKey="absent" fill="hsl(var(--muted))" name="Absent" stackId="a" />
+                <Bar dataKey="helpers" fill="hsl(var(--accent))" name="Helpers" />
             </BarChart>
             </ResponsiveContainer>
         ) : (
             <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-                <p>No student data available to display chart.</p>
+                <p>No student or helper data available to display chart.</p>
             </div>
         )}
       </div>

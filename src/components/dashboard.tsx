@@ -1,44 +1,35 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
-import type { Student } from '@/lib/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Student, HelperAttendance } from '@/lib/types';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { StudentCard } from '@/components/student-card';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, writeBatch, collection, updateDoc } from 'firebase/firestore';
+import { doc, writeBatch, collection, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 
 
 interface DashboardProps {
     initialStudents: Student[];
     setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+    initialHelperAttendance: HelperAttendance | null;
 }
 
-export function Dashboard({ initialStudents, setStudents: setStudentsProp }: DashboardProps) {
+export function Dashboard({ initialStudents, setStudents: setStudentsProp, initialHelperAttendance }: DashboardProps) {
   const students = initialStudents;
   const setStudents = setStudentsProp;
   const { user } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const [helperAttendance, setHelperAttendance] = useState<HelperAttendance | null>(initialHelperAttendance);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleImport(file);
-    }
-     if (event.target) {
-      event.target.value = '';
-    }
-  };
+  useEffect(() => {
+    setHelperAttendance(initialHelperAttendance);
+  }, [initialHelperAttendance]);
+
 
   const handleImport = async (file: File) => {
     if (!user) {
@@ -84,10 +75,12 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
 
           const batch = writeBatch(db);
           const newStudentsWithIds: Student[] = [];
+          
+          const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
 
           for (const studentData of importedStudents) {
               const docRef = doc(collection(db, 'students'));
-              const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
+              
               const avatarId = avatarIdOptions[(students.length + newStudentsWithIds.length) % avatarIdOptions.length];
               const studentWithAvatar = {
                 ...studentData,
@@ -117,6 +110,40 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
     };
     reader.readAsText(file);
   };
+  
+  const handleAddStudent = async (newStudentData: Omit<Student, 'id' | 'avatarId' | 'attendance' | 'userId'>) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to add a student.' });
+        return;
+    }
+    const avatarIdOptions = ['student-liam', 'student-olivia', 'student-noah', 'student-emma', 'student-oliver', 'student-ava'];
+    const avatarId = avatarIdOptions[students.length % avatarIdOptions.length];
+
+    const studentToAdd = {
+        ...newStudentData,
+        userId: user.uid,
+        avatarId: avatarId!,
+        attendance: [],
+    };
+
+    try {
+        const docRef = await addDoc(collection(db, 'students'), studentToAdd);
+        const newStudentWithId: Student = { ...studentToAdd, id: docRef.id };
+        setStudents(prev => [...prev, newStudentWithId]);
+        toast({
+            title: 'Student Added',
+            description: `${newStudentWithId.name} has been added to the dashboard.`,
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Add Student Failed',
+            description: 'There was an error saving the new student.',
+        });
+        console.error('Add Student Error:', error);
+    }
+  };
+
 
   const updateStudentInFirestore = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>) => {
     const studentRef = doc(db, 'students', studentId);
@@ -129,6 +156,28 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
         title: 'Database Error',
         description: 'Could not save student changes to the database.',
       });
+    }
+  };
+  
+  const handleUpdateHelpers = async (newCount: number) => {
+    if (!user) return;
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    const currentYear = new Date().getFullYear();
+    const docId = `${user.uid}_${currentMonth}_${currentYear}`;
+    
+    const newHelperData: HelperAttendance = {
+      userId: user.uid,
+      month: currentMonth,
+      year: currentYear,
+      count: newCount,
+    };
+
+    try {
+      await setDoc(doc(db, 'helpers', docId), newHelperData);
+      setHelperAttendance(newHelperData);
+    } catch (error) {
+       console.error("Error updating helpers:", error);
+       toast({ variant: "destructive", title: "Update Failed", description: "Could not save helper count." });
     }
   };
 
@@ -214,20 +263,16 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
   
   return (
     <div className="flex min-h-screen w-full flex-col">
-       <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept=".csv"
-        />
       <DashboardHeader 
         searchTerm={searchTerm} 
         onSearchChange={setSearchTerm}
         students={students}
         presentCount={presentCount}
-        onImportClick={handleImportClick}
+        onImport={handleImport}
         user={user}
+        onAddStudent={handleAddStudent}
+        helperAttendance={helperAttendance}
+        onUpdateHelpers={handleUpdateHelpers}
       />
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         {students.length === 0 ? (
@@ -236,9 +281,9 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
             <p className="text-muted-foreground mt-2">
               It looks like you don't have any students yet.
               <br />
-              You can add students by importing a CSV file.
+              You can add students individually or by importing a CSV file.
             </p>
-            <p className="text-xs text-muted-foreground mt-4">Use the upload button in the header to import a CSV with 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
+            <p className="text-xs text-muted-foreground mt-4">Use the buttons in the header to get started. CSVs need 'name' and 'points' columns. 'birthday' (YYYY-MM-DD) is optional.</p>
           </div>
         ) : filteredStudents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
