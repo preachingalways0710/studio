@@ -4,6 +4,7 @@ import { Dashboard } from '@/components/dashboard';
 import { initialStudents } from '@/lib/students';
 import { useState } from 'react';
 import type { Student } from '@/lib/types';
+import React from 'react';
 
 export default function Home() {
   const [students, setStudents] = useState<Student[]>(initialStudents);

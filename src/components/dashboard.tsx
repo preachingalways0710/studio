@@ -15,19 +15,12 @@ interface DashboardProps {
 }
 
 export function Dashboard({ initialStudents, setStudents: setStudentsProp }: DashboardProps) {
-  const [students, setStudentsState] = useState<Student[]>(initialStudents);
+  // The dashboard should not manage its own student state, but use the one passed in from the page
+  const students = initialStudents;
+  const setStudents = setStudentsProp;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-
-  const setStudents = (newStudents: Student[] | ((prev: Student[]) => Student[])) => {
-      if (typeof newStudents === 'function') {
-          setStudentsState(newStudents);
-          setStudentsProp(newStudents);
-      } else {
-          setStudentsState(newStudents);
-          setStudentsProp(newStudents);
-      }
-  };
 
   const handleImport = (file: File) => {
     const reader = new FileReader();
@@ -36,7 +29,12 @@ export function Dashboard({ initialStudents, setStudents: setStudentsProp }: Das
       if (typeof text === 'string') {
         try {
           const lines = text.split('\n').filter(line => line.trim() !== '');
-          const header = lines[0].split(',').map(h => h.trim());
+          if (lines.length < 2) {
+            toast({ variant: 'destructive', title: 'Invalid CSV', description: 'CSV must have a header and at least one data row.'});
+            return;
+          }
+          
+          const header = lines[0].split(',').map(h => h.trim().toLowerCase());
           const nameIndex = header.indexOf('name');
           const pointsIndex = header.indexOf('points');
           const birthdayIndex = header.indexOf('birthday');
